@@ -1,0 +1,123 @@
+NAME
+    Scope::Upper - Act on upper scopes.
+
+VERSION
+    Version 0.01
+
+SYNOPSIS
+        package X;
+
+        use Scope::Upper qw/reap localize localize_elem/;
+
+        sub desc { shift->{desc} }
+
+        sub set_tag {
+         my ($desc) = @_;
+
+         # First localize $x so that it gets destroyed last
+         localize '$x' => bless({ desc => $desc }, __PACKAGE__) => 1;
+
+         reap sub {
+          my $pkg = caller;
+          my $x = do { no strict 'refs'; ${$pkg.'::x'} }; # Get the $x in the scope
+          print $x->desc . ": done\n";
+         } => 1;
+
+         localize_elem '%SIG', '__WARN__' => sub {
+          my $pkg = caller;
+          my $x = do { no strict 'refs'; ${$pkg.'::x'} }; # Get the $x in the scope
+          CORE::warn($x->desc . ': ' . join('', @_));
+         } => 1;
+        }
+
+        package Y;
+
+        {
+         X::set_tag('pie');
+         # $x is now a X object
+         warn 'what'; # warns "pie: what at ..."
+         ...
+        } # "pie: done" is printed
+
+DESCRIPTION
+    This module lets you defer actions that will take place when the control
+    flow returns into an upper scope. Currently, you can hook an upper scope
+    end, or localize variables and array/hash values in higher contexts.
+
+FUNCTIONS
+  "reap $callback, $level"
+    Add a destructor that calls $callback when the $level-th upper scope
+    ends, where 0 corresponds to the current scope.
+
+  "localize $what, $value, $level"
+    A "local" delayed to the time of first return into the $level-th upper
+    scope. $what can be :
+
+    *   A glob, in which case $value can either be a glob or a reference.
+        "localize" follows then the same syntax as "local *x = $value". For
+        example, if $value is a scalar reference, then the "SCALAR" slot of
+        the glob will be set to $$value - just like "local *x = \1" sets $x
+        to 1.
+
+    *   A string beginning with a sigil, representing the symbol to localize
+        and assign to. If the sigil is '$', then $value isn't dereferenced,
+        that is
+
+            localize '$x', \'foo' => 0;
+
+        will set $x to a reference to the string 'foo'. Other sigils behave
+        as if a glob was passed.
+
+        The symbol is resolved when the actual localization takes place and
+        not when "localize" is called. This means that
+
+            sub tag { localize '$x', $_[0] => 1; }
+
+        will localize in the caller's namespace.
+
+  "localize_elem $what, $key, $value, $level"
+    Similar to "localize" but for array and hash elements. If $what is a
+    glob, the slot to fill is determined from which type of reference $value
+    is ; otherwise it's inferred from the sigil. $key is either an array
+    index or a hash key, depending of which kind of variable you localize.
+
+  "TOPLEVEL"
+    Returns the level that currently represents the highest scope.
+
+EXPORT
+    The functions "reap", "localize", "localize_elem" and "TOPLEVEL" are
+    only exported on request, either individually or by the tags ':funcs'
+    and ':all'.
+
+DEPENDENCIES
+    XSLoader (standard since perl 5.006).
+
+SEE ALSO
+    Alias, Hook::Scope, Scope::Guard, Guard.
+
+AUTHOR
+    Vincent Pit, "<perl at profvince.com>", <http://www.profvince.com>.
+
+    You can contact me by mail or on "irc.perl.org" (vincent).
+
+BUGS
+    Please report any bugs or feature requests to "bug-scope-upper at
+    rt.cpan.org", or through the web interface at
+    <http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Scope-Upper>. I will be
+    notified, and then you'll automatically be notified of progress on your
+    bug as I make changes.
+
+SUPPORT
+    You can find documentation for this module with the perldoc command.
+
+        perldoc Scope::Upper
+
+ACKNOWLEDGEMENTS
+    Inspired by Ricardo Signes.
+
+COPYRIGHT & LICENSE
+    Copyright 2008 Vincent Pit, all rights reserved.
+
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
