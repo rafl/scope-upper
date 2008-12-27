@@ -130,6 +130,31 @@ our %EXPORT_TAGS = (
 our @EXPORT_OK   = map { @$_ } values %EXPORT_TAGS;
 $EXPORT_TAGS{'all'} = [ @EXPORT_OK ];
 
+=head1 CAVEATS
+
+Be careful that local variables are restored in the reverse order in which they were localized.
+Consider those examples:
+
+    local $x = 0;
+    {
+     reap sub { print $x } => 0;
+     local $x = 1;
+     ...
+    }
+    # prints '0'
+    ...
+    {
+     local $x = 1;
+     reap sub { $x = 2 } => 0;
+     ...
+    }
+    # $x is 0
+
+The first case is "solved" by moving the C<local> before the C<reap>, and the second by using L</localize> instead of L</reap>.
+
+L</reap>, L</localize> and L</localize_elem> effects can't cross C<BEGIN> blocks, hence calling those functions in C<import> is deemed to be useless.
+This is an hopeless case because C<BEGIN> blocks are executed once while localizing constructs should do their job at each run.
+
 =head1 DEPENDENCIES
 
 L<XSLoader> (standard since perl 5.006).
