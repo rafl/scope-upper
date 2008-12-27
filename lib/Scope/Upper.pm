@@ -87,15 +87,16 @@ For example, if C<$value> is a scalar reference, then the C<SCALAR> slot of the 
 
 =item *
 
-A string beginning with a sigil, representing the symbol to localize and assign to.
-If the sigil is C<'$'>, then C<$value> isn't dereferenced, that is
+A string beginning with a sigil, representing the symbol to localize and to assign to.
+If the sigil is C<'$'>, L</localize> follows the same syntax as C<local $x = $value>, i.e. C<$value> isn't dereferenced.
+For example,
 
     localize '$x', \'foo' => 0;
 
 will set C<$x> to a reference to the string C<'foo'>.
-Other sigils behave as if a glob was passed.
+Other sigils (C<'@'>, C<'%'>, C<'&'> and C<'*'>) require C<$value> to be a reference of the corresponding type.
 
-The symbol is resolved when the actual localization takes place and not when C<localize> is called.
+When the symbol is given by a string, it is resolved when the actual localization takes place and not when C<localize> is called.
 This means that
 
     sub tag { localize '$x', $_[0] => 1; }
