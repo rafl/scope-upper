@@ -25,6 +25,7 @@ WriteMakefile(
     ABSTRACT_FROM       => 'lib/Scope/Upper.pm',
     PL_FILES            => {},
     PREREQ_PM => {
+        'Exporter' => 0,
         'XSLoader' => 0,
     },
     dist          => {
