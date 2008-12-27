@@ -24,6 +24,10 @@
 # define SU_D(X)
 #endif
 
+#ifndef Newx
+# define Newx(v, n, c) New(0, v, n, c)
+#endif
+
 #ifndef SvPV_const
 # define SvPV_const(S, L) SvPV(S, L)
 #endif
@@ -38,6 +42,14 @@
 
 #ifndef gv_fetchpvn_flags
 # define gv_fetchpvn_flags(A, B, C, D) gv_fetchpv((A), (C), (D))
+#endif
+
+#ifndef PERL_MAGIC_tied
+# define PERL_MAGIC_tied 'P'
+#endif
+
+#ifndef PERL_MAGIC_env
+# define PERL_MAGIC_env 'E'
 #endif
 
 #define SU_HAS_PERL(R, V, S) (PERL_REVISION > (R) || (PERL_REVISION == (R) && (PERL_VERSION > (V) || (PERL_VERSION == (V) && (PERL_SUBVERSION >= (S))))))
