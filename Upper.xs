@@ -145,13 +145,13 @@ STATIC void su_save_helem(pTHX_ HV *hv, SV *keysv, SV **svp, I32 preeminent) {
   save_gp((GV *) *svp, 0);
   return;
  }
- if (!preeminent) {
+ if (preeminent)
+  save_helem(hv, keysv, svp);
+ else {
   STRLEN keylen;
   const char * const key = SvPV_const(keysv, keylen);
   SAVEDELETE(hv, savepvn(key, keylen),
                  SvUTF8(keysv) ? -(I32)keylen : (I32)keylen);
- } else {
-  save_helem(hv, keysv, svp);
  }
 }
 
