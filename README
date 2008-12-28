@@ -2,7 +2,7 @@ NAME
     Scope::Upper - Act on upper scopes.
 
 VERSION
-    Version 0.01
+    Version 0.02
 
 SYNOPSIS
         package X;
@@ -60,16 +60,19 @@ FUNCTIONS
         to 1.
 
     *   A string beginning with a sigil, representing the symbol to localize
-        and assign to. If the sigil is '$', then $value isn't dereferenced,
-        that is
+        and to assign to. If the sigil is '$', "localize" follows the same
+        syntax as "local $x = $value", i.e. $value isn't dereferenced. For
+        example,
 
             localize '$x', \'foo' => 0;
 
-        will set $x to a reference to the string 'foo'. Other sigils behave
-        as if a glob was passed.
+        will set $x to a reference to the string 'foo'. Other sigils ('@',
+        '%', '&' and '*') require $value to be a reference of the
+        corresponding type.
 
-        The symbol is resolved when the actual localization takes place and
-        not when "localize" is called. This means that
+        When the symbol is given by a string, it is resolved when the actual
+        localization takes place and not when "localize" is called. This
+        means that
 
             sub tag { localize '$x', $_[0] => 1; }
 
@@ -88,6 +91,33 @@ EXPORT
     The functions "reap", "localize", "localize_elem" and "TOPLEVEL" are
     only exported on request, either individually or by the tags ':funcs'
     and ':all'.
+
+CAVEATS
+    Be careful that local variables are restored in the reverse order in
+    which they were localized. Consider those examples:
+
+        local $x = 0;
+        {
+         reap sub { print $x } => 0;
+         local $x = 1;
+         ...
+        }
+        # prints '0'
+        ...
+        {
+         local $x = 1;
+         reap sub { $x = 2 } => 0;
+         ...
+        }
+        # $x is 0
+
+    The first case is "solved" by moving the "local" before the "reap", and
+    the second by using "localize" instead of "reap".
+
+    "reap", "localize" and "localize_elem" effects can't cross "BEGIN"
+    blocks, hence calling those functions in "import" is deemed to be
+    useless. This is an hopeless case because "BEGIN" blocks are executed
+    once while localizing constructs should do their job at each run.
 
 DEPENDENCIES
     XSLoader (standard since perl 5.006).
@@ -111,6 +141,9 @@ SUPPORT
     You can find documentation for this module with the perldoc command.
 
         perldoc Scope::Upper
+
+    Tests code coverage report is available at
+    <http://www.profvince.com/perl/cover/Scope-Upper>.
 
 ACKNOWLEDGEMENTS
     Inspired by Ricardo Signes.

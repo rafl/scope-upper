@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Scope-Upper
-version:            0.01
+version:            0.02
 abstract:           Act on upper scopes.
 author:
     - Vincent Pit <perl@profvince.com>
@@ -9,6 +9,7 @@ distribution_type:  module
 configure_requires:
     ExtUtils::MakeMaker:  0
 requires:
+    Exporter:  0
     XSLoader:  0
 no_index:
     directory:

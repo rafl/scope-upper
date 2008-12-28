@@ -1,5 +1,11 @@
 Revision history for Scope-Upper
 
+0.02    2008-12-28 18:40 UTC
+        + Doc : Clarifications and improvements.
+        + Fix : Missing compatibility macros.
+        + Fix : Localized nonexistant array elements should be deleted when
+                their time comes so that the array recovers its original length.
+
 0.01    2008-12-26 16:05 UTC
         First version, released on an unsuspecting world.
 
