@@ -146,6 +146,59 @@ typedef struct {
    )
 #endif
 
+STATIC I32 su_av_preeminent(pTHX_ AV *av, I32 key) {
+#define su_av_preeminent(A, K) su_av_preeminent(aTHX_ (A), (K))
+ MAGIC *mg;
+ HV *stash;
+
+ if (!av)
+  return 0;
+ if (SvCANEXISTDELETE(av))
+  return av_exists(av, key);
+
+ return 1;
+}
+
+#ifndef SAVEADELETE
+
+typedef struct {
+ AV *av;
+ I32 key;
+} su_ud_adelete;
+
+STATIC void su_adelete(pTHX_ void *ud_) {
+ su_ud_adelete *ud = ud_;
+
+ av_delete(ud->av, ud->key, G_DISCARD);
+ SvREFCNT_dec(ud->av);
+
+ Safefree(ud);
+}
+
+STATIC void su_save_adelete(pTHX_ AV *av, I32 key) {
+#define su_save_adelete(A, K) su_save_adelete(aTHX_ (A), (K))
+ su_ud_adelete *ud;
+
+ Newx(ud, 1, su_ud_adelete);
+ ud->av  = av;
+ ud->key = key;
+ SvREFCNT_inc(av);
+
+ SAVEDESTRUCTOR_X(su_adelete, ud);
+}
+
+#define SAVEADELETE(A, K) su_save_adelete((A), (K))
+
+#endif /* SAVEADELETE */
+
+STATIC void su_save_aelem(pTHX_ AV *av, I32 key, SV **svp, I32 preeminent) {
+#define su_save_aelem(A, K, S, P) su_save_aelem(aTHX_ (A), (K), (S), (P))
+ if (preeminent)
+  save_aelem(av, key, svp);
+ else
+  SAVEADELETE(av, key);
+}
+
 STATIC I32 su_hv_preeminent(pTHX_ HV *hv, SV *keysv) {
 #define su_hv_preeminent(H, K) su_hv_preeminent(aTHX_ (H), (K))
  MAGIC *mg;
@@ -234,9 +287,10 @@ STATIC void su_localize(pTHX_ void *ud_) {
    if (elem) {
     I32 idx  = SvIV(elem);
     AV *av   = GvAV(gv);
+    I32 preeminent = su_av_preeminent(av, idx);
     SV **svp = av_fetch(av, idx, 1);
     if (!*svp || *svp == &PL_sv_undef) croak(PL_no_aelem, idx);
-    save_aelem(av, idx, svp);
+    su_save_aelem(av, idx, svp, preeminent);
     gv = (GV *) *svp;
     goto maybe_deref;
    } else

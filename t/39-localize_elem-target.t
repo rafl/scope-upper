@@ -26,7 +26,7 @@ our @a;
   localize_elem '@main::a', 4, 8, 0;
   is_deeply \@a, [ 4 .. 6, undef, 8 ], 'localize_elem "@a", 4, 8, 0 [ok]';
  }
- is_deeply \@a, [ 4 .. 6, undef, undef ], 'localize_elem "@a", 4, 8, 0 [end]';
+ is_deeply \@a, [ 4 .. 6 ], 'localize_elem "@a", 4, 8, 0 [end]';
 }
 
 {
