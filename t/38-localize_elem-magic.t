@@ -5,7 +5,30 @@ use warnings;
 
 use Scope::Upper qw/localize_elem/;
 
-use Test::More tests => 6;
+use Test::More tests => 8;
+
+{
+ package Scope::Upper::Test::TiedArray;
+
+ sub TIEARRAY { bless [], $_[0] }
+ sub STORE { $_[0]->[$_[1]] = $_[2] }
+ sub FETCH { $_[0]->[$_[1]] }
+ sub CLEAR { @{$_[0]} = (); }
+ sub FETCHSIZE { scalar @{$_[0]} }
+ sub EXTEND {}
+}
+
+our @a;
+
+tie @a, 'Scope::Upper::Test::TiedArray';
+{
+ local @a = (5 .. 7);
+ {
+  localize_elem '@a', 4 => 12 => 0;
+  is_deeply \@a, [ 5 .. 7, undef, 12 ], 'localize_elem @incomplete_tied_array, $nonexistent, 12 => 0 [ok]';
+ }
+ is_deeply \@a, [ 5 .. 7, undef, undef ], 'localize_elem @incomplete_tied_array, $nonexistent, 12 => 0 [end]';
+}
 
 our $x;
 
