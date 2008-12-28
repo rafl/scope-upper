@@ -10,6 +10,8 @@
 # define SU_DEBUG 0
 #endif
 
+/* --- Compatibility ------------------------------------------------------- */
+
 #ifndef STMT_START
 # define STMT_START do
 #endif
@@ -54,86 +56,7 @@
 
 #define SU_HAS_PERL(R, V, S) (PERL_REVISION > (R) || (PERL_REVISION == (R) && (PERL_VERSION > (V) || (PERL_VERSION == (V) && (PERL_SUBVERSION >= (S))))))
 
-typedef struct {
- I32 depth;
- I32 *origin;
- void (*handler)(pTHX_ void *);
-} su_ud_common;
-
-#define SU_UD_DEPTH(U)   (((su_ud_common *) (U))->depth)
-#define SU_UD_ORIGIN(U)  (((su_ud_common *) (U))->origin)
-#define SU_UD_HANDLER(U) (((su_ud_common *) (U))->handler)
-
-#define SU_UD_FREE(U) do { \
- if (SU_UD_ORIGIN(U)) Safefree(SU_UD_ORIGIN(U)); \
- Safefree(U); \
-} while (0)
-
-typedef struct {
- su_ud_common ci;
- SV *cb;
-} su_ud_reap;
-
-STATIC void su_call(pTHX_ void *ud_) {
- su_ud_reap *ud = (su_ud_reap *) ud_;
-#if SU_HAS_PERL(5, 10, 0)
- I32 dieing = PL_op->op_type == OP_DIE;
-#endif
-
- dSP;
-
- SU_D(PerlIO_printf(Perl_debug_log, "%p: @@@ call at %d (save is %d)\n",
-                                     ud, PL_scopestack_ix, PL_savestack_ix));
- ENTER;
- SAVETMPS;
-
- PUSHMARK(SP);
- PUTBACK;
-
- /* If cxstack_ix isn't incremented there, the eval context will be overwritten
-  * when the new sub scope will be created in call_sv. */
-
-#if SU_HAS_PERL(5, 10, 0)
- if (dieing)
-  if (cxstack_ix < cxstack_max)
-   ++cxstack_ix;
-  else
-   cxstack_ix = Perl_cxinc(aTHX);
-#endif
-
- call_sv(ud->cb, G_VOID);
-
-#if SU_HAS_PERL(5, 10, 0)
- if (dieing && cxstack_ix > 0)
-  --cxstack_ix;
-#endif
-
- SPAGAIN;
- PUTBACK;
-
- FREETMPS;
- LEAVE; 
-
- SvREFCNT_dec(ud->cb);
- SU_UD_FREE(ud);
-}
-
-STATIC void su_reap(pTHX_ void *ud) {
-#define su_reap(U) su_reap(aTHX_ (U))
- SU_D(PerlIO_printf(Perl_debug_log, "%p: === reap at %d (save is %d)\n",
-                                     ud, PL_scopestack_ix, PL_savestack_ix));
- SAVEDESTRUCTOR_X(su_call, ud);
- SU_D(PerlIO_printf(Perl_debug_log, "%p: savestack is now at %d, base at %d\n",
-                                     ud, PL_savestack_ix,
-                                         PL_scopestack[PL_scopestack_ix]));
-}
-
-typedef struct {
- su_ud_common ci;
- SV *sv;
- SV *val;
- SV *elem;
-} su_ud_localize;
+/* --- Stack manipulations ------------------------------------------------- */
 
 #ifndef SvCANEXISTDELETE
 # define SvCANEXISTDELETE(sv) \
@@ -145,6 +68,8 @@ typedef struct {
       )                       \
    )
 #endif
+
+/* ... Saving array elements ............................................... */
 
 STATIC I32 su_av_preeminent(pTHX_ AV *av, I32 key) {
 #define su_av_preeminent(A, K) su_av_preeminent(aTHX_ (A), (K))
@@ -199,6 +124,8 @@ STATIC void su_save_aelem(pTHX_ AV *av, I32 key, SV **svp, I32 preeminent) {
   SAVEADELETE(av, key);
 }
 
+/* ... Saving hash elements ................................................ */
+
 STATIC I32 su_hv_preeminent(pTHX_ HV *hv, SV *keysv) {
 #define su_hv_preeminent(H, K) su_hv_preeminent(aTHX_ (H), (K))
  MAGIC *mg;
@@ -227,6 +154,93 @@ STATIC void su_save_helem(pTHX_ HV *hv, SV *keysv, SV **svp, I32 preeminent) {
   save_helem(hv, keysv, svp);
  }
 }
+
+/* --- Actions ------------------------------------------------------------- */
+
+typedef struct {
+ I32 depth;
+ I32 *origin;
+ void (*handler)(pTHX_ void *);
+} su_ud_common;
+
+#define SU_UD_DEPTH(U)   (((su_ud_common *) (U))->depth)
+#define SU_UD_ORIGIN(U)  (((su_ud_common *) (U))->origin)
+#define SU_UD_HANDLER(U) (((su_ud_common *) (U))->handler)
+
+#define SU_UD_FREE(U) do { \
+ if (SU_UD_ORIGIN(U)) Safefree(SU_UD_ORIGIN(U)); \
+ Safefree(U); \
+} while (0)
+
+/* ... Reap ................................................................ */
+
+typedef struct {
+ su_ud_common ci;
+ SV *cb;
+} su_ud_reap;
+
+STATIC void su_call(pTHX_ void *ud_) {
+ su_ud_reap *ud = (su_ud_reap *) ud_;
+#if SU_HAS_PERL(5, 10, 0)
+ I32 dieing = PL_op->op_type == OP_DIE;
+#endif
+
+ dSP;
+
+ SU_D(PerlIO_printf(Perl_debug_log, "%p: @@@ call at %d (save is %d)\n",
+                                     ud, PL_scopestack_ix, PL_savestack_ix));
+ ENTER;
+ SAVETMPS;
+
+ PUSHMARK(SP);
+ PUTBACK;
+
+ /* If cxstack_ix isn't incremented there, the eval context will be overwritten
+  * when the new sub scope will be created in call_sv. */
+
+#if SU_HAS_PERL(5, 10, 0)
+ if (dieing)
+  if (cxstack_ix < cxstack_max)
+   ++cxstack_ix;
+  else
+   cxstack_ix = Perl_cxinc(aTHX);
+#endif
+
+ call_sv(ud->cb, G_VOID);
+
+#if SU_HAS_PERL(5, 10, 0)
+ if (dieing && cxstack_ix > 0)
+  --cxstack_ix;
+#endif
+
+ SPAGAIN;
+ PUTBACK;
+
+ FREETMPS;
+ LEAVE;
+
+ SvREFCNT_dec(ud->cb);
+ SU_UD_FREE(ud);
+}
+
+STATIC void su_reap(pTHX_ void *ud) {
+#define su_reap(U) su_reap(aTHX_ (U))
+ SU_D(PerlIO_printf(Perl_debug_log, "%p: === reap at %d (save is %d)\n",
+                                     ud, PL_scopestack_ix, PL_savestack_ix));
+ SAVEDESTRUCTOR_X(su_call, ud);
+ SU_D(PerlIO_printf(Perl_debug_log, "%p: savestack is now at %d, base at %d\n",
+                                     ud, PL_savestack_ix,
+                                         PL_scopestack[PL_scopestack_ix]));
+}
+
+/* ... Localize & localize array/hash element .............................. */
+
+typedef struct {
+ su_ud_common ci;
+ SV *sv;
+ SV *val;
+ SV *elem;
+} su_ud_localize;
 
 STATIC void su_localize(pTHX_ void *ud_) {
 #define su_localize(U) su_localize(aTHX_ (U))
@@ -337,6 +351,8 @@ assign:
  SU_UD_FREE(ud);
 }
 
+/* --- Pop a context back -------------------------------------------------- */
+
 #if SU_DEBUG
 # ifdef DEBUGGING
 #  define SU_CXNAME PL_block_type[CxTYPE(&cxstack[cxstack_ix])]
@@ -379,6 +395,8 @@ STATIC void su_pop(pTHX_ void *ud) {
   SU_UD_HANDLER(ud)(aTHX_ ud);
  }
 }
+
+/* --- Initialize the stack and the action userdata ------------------------ */
 
 STATIC I32 su_init(pTHX_ I32 level, void *ud, I32 size) {
 #define su_init(L, U, S) su_init(aTHX_ (L), (U), (S))
