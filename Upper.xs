@@ -76,8 +76,7 @@ STATIC I32 su_av_preeminent(pTHX_ AV *av, I32 key) {
  MAGIC *mg;
  HV *stash;
 
- if (!av)
-  return 0;
+ if (!av) return 0;
  if (SvCANEXISTDELETE(av))
   return av_exists(av, key);
 
@@ -131,8 +130,7 @@ STATIC I32 su_hv_preeminent(pTHX_ HV *hv, SV *keysv) {
  MAGIC *mg;
  HV *stash;
 
- if (!hv)
-  return 0;
+ if (!hv) return 0;
  if (SvCANEXISTDELETE(hv) || mg_find((SV *) hv, PERL_MAGIC_env))
   return hv_exists_ent(hv, keysv, 0);
 
