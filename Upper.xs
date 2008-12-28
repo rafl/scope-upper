@@ -135,23 +135,28 @@ typedef struct {
  SV *elem;
 } su_ud_localize;
 
-/* Those two functions are courtesy of pp_hot.c:pp_helem */
+#ifndef SvCANEXISTDELETE
+# define SvCANEXISTDELETE(sv) \
+  (!SvRMAGICAL(sv)            \
+   || ((mg = mg_find((SV *) sv, PERL_MAGIC_tied))            \
+       && (stash = SvSTASH(SvRV(SvTIED_obj((SV *) sv, mg)))) \
+       && gv_fetchmethod_autoload(stash, "EXISTS", TRUE)     \
+       && gv_fetchmethod_autoload(stash, "DELETE", TRUE)     \
+      )                       \
+   )
+#endif
 
 STATIC I32 su_hv_preeminent(pTHX_ HV *hv, SV *keysv) {
 #define su_hv_preeminent(H, K) su_hv_preeminent(aTHX_ (H), (K))
  MAGIC *mg;
  HV *stash;
- return (!SvRMAGICAL(hv)
-         || mg_find((SV *) hv, PERL_MAGIC_env)
-         || ((mg = mg_find((SV *) hv, PERL_MAGIC_tied))
-                   /* Try to preserve the existenceness of a tied hash
-                    * element by using EXISTS and DELETE if possible.
-                    * Fallback to FETCH and STORE otherwise */
-             && (stash = SvSTASH(SvRV(SvTIED_obj((SV *) hv, mg))))
-             && gv_fetchmethod_autoload(stash, "EXISTS", TRUE)
-             && gv_fetchmethod_autoload(stash, "DELETE", TRUE)
-            )
-        ) ? hv_exists_ent(hv, keysv, 0) : 1;
+
+ if (!hv)
+  return 0;
+ if (SvCANEXISTDELETE(hv) || mg_find((SV *) hv, PERL_MAGIC_env))
+  return hv_exists_ent(hv, keysv, 0);
+
+ return 1;
 }
 
 STATIC void su_save_helem(pTHX_ HV *hv, SV *keysv, SV **svp, I32 preeminent) {
@@ -240,7 +245,7 @@ STATIC void su_localize(pTHX_ void *ud_) {
   case SVt_PVHV:
    if (elem) {
     HV *hv   = GvHV(gv);
-    I32 preeminent = hv ? su_hv_preeminent(hv, elem) : 0;
+    I32 preeminent = su_hv_preeminent(hv, elem);
     HE *he   = hv_fetch_ent(hv, elem, 1, 0);
     SV **svp = he ? &HeVAL(he) : NULL;
     if (!svp || *svp == &PL_sv_undef) croak("Modification of non-creatable hash value attempted, subscript \"%s\"", SvPV_nolen_const(*svp));
