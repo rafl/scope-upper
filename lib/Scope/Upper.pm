@@ -22,7 +22,7 @@ BEGIN {
 
     package X;
 
-    use Scope::Upper qw/reap localize localize_elem/;
+    use Scope::Upper qw/reap localize localize_elem localize_delete/;
 
     sub desc { shift->{desc} }
 
@@ -43,13 +43,15 @@ BEGIN {
       my $x = do { no strict 'refs'; ${$pkg.'::x'} }; # Get the $x in the scope
       CORE::warn($x->desc . ': ' . join('', @_));
      } => 1;
+
+     localize_delete '@ARGV', $#ARGV => 1; # delete last @ARGV element
     }
 
     package Y;
 
     {
      X::set_tag('pie');
-     # $x is now a X object
+     # $x is now a X object, and @ARGV has one element less
      warn 'what'; # warns "pie: what at ..."
      ...
     } # "pie: done" is printed
@@ -57,7 +59,7 @@ BEGIN {
 =head1 DESCRIPTION
 
 This module lets you defer actions that will take place when the control flow returns into an upper scope.
-Currently, you can hook an upper scope end, or localize variables and array/hash values in higher contexts.
+Currently, you can hook an upper scope end, or localize variables, array/hash values or deletions of elements in higher contexts.
 
 =head1 FUNCTIONS
 
@@ -113,10 +115,26 @@ C<$key> is either an array index or a hash key, depending of which kind of varia
 
 =head2 C<localize_delete $what, $key, $level>
 
-Similiar to L</localize>, but for deleting objects or elements.
-If C<$what> is a glob, it's equivalent to C<local *x;>, and C<$key> is ignored.
-If C<$what> is a string beginning with C<'@'> or C<'%'>, it's equivalent to respectiveley C<local $a[$key]; delete $a[$key];> or C<local $h{$key}; delete $h{$key};>.
-If C<$what> is a string beginning with C<'&'>, it's more or less of equivalent to C<undef &func;>, but actually more powerful as C<&func> won't even C<exists> anymore.
+Similiar to L</localize>, but for deleting variables or array/hash elements.
+C<$what> can be:
+
+=over 4
+
+=item *
+
+A glob, in which case C<$key> is ignored and the call is equivalent to C<local *x>.
+
+=item *
+
+A string beginning with C<'@'> or C<'%'>, for which the call is equivalent to respectiveley C<local $a[$key]; delete $a[$key]> and C<local $h{$key}; delete $h{$key}>.
+
+=item *
+
+A string beginning with C<'&'>, which more or less does C<undef &func> in the upper scope.
+It's actually more powerful, as C<&func> won't even C<exists> anymore.
+C<$key> is ignored.
+
+=back
 
 =head2 C<TOPLEVEL>
 

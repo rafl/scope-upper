@@ -7,7 +7,7 @@ use warnings;
 
 use blib;
 
-use Scope::Upper qw/reap localize localize_elem/;
+use Scope::Upper qw/reap localize localize_elem localize_delete/;
 
 sub desc { shift->{desc} }
 
@@ -28,6 +28,8 @@ sub set_tag {
   my $x = do { no strict 'refs'; ${$pkg.'::x'} }; # Get the $x in the scope
   CORE::warn($x->desc . ': ' . join('', @_));
  } => 1;
+
+ localize_delete '@ARGV', $#ARGV => 1; # delete last @ARGV element
 }
 
 package main;
@@ -37,6 +39,6 @@ use warnings;
 
 {
  X::set_tag('pie');
- # $x is now a X object
- warn 'what'; # warns "pie: what"
+ # $x is now a X object, and @ARGV has one element less
+ warn 'what'; # warns "pie: what at ..."
 } # "pie: done" is printed
