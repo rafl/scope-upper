@@ -401,6 +401,13 @@ STATIC I32 su_init(pTHX_ I32 level, void *ud, I32 size) {
  I32 i, depth = 0, *origin;
  I32 cur, last, step;
 
+ LEAVE;
+
+ if (level <= 0) {
+  SU_UD_HANDLER(ud)(aTHX_ ud);
+  goto done;
+ }
+
  SU_D(PerlIO_printf(Perl_debug_log, "%p: ### init for level %d\n", ud, level));
 
  for (i = 0; i < level; ++i) {
@@ -447,6 +454,15 @@ STATIC I32 su_init(pTHX_ I32 level, void *ud, I32 size) {
 
  SU_UD_ORIGIN(ud) = origin;
  SU_UD_DEPTH(ud)  = depth;
+
+ SU_D(PerlIO_printf(Perl_debug_log, "%p: set original destructor at %d [%d]\n",
+                                     ud, PL_savestack_ix, depth));
+
+ SAVEDESTRUCTOR_X(su_pop, ud);
+
+done:
+ ENTER;
+
  return depth;
 }
 
@@ -487,15 +503,7 @@ CODE:
  SU_UD_ORIGIN(ud)  = NULL;
  SU_UD_HANDLER(ud) = su_reap;
  ud->cb = newSVsv(hook);
- LEAVE;
- if (level) {
-  I32 depth = su_init(level, ud, 3);
-  SU_D(PerlIO_printf(Perl_debug_log, "%p: set original destructor at %d [%d]\n",
-                                      ud, PL_savestack_ix, depth));
-  SAVEDESTRUCTOR_X(su_pop, ud);
- } else
-  su_reap(ud);
- ENTER;
+ su_init(level, ud, 3);
 
 void
 localize(SV *sv, SV *val, ...)
@@ -512,15 +520,7 @@ CODE:
  ud->sv   = sv;
  ud->val  = newSVsv(val);
  ud->elem = NULL;
- LEAVE;
- if (level) {
-  I32 depth = su_init(level, ud, 3);
-  SU_D(PerlIO_printf(Perl_debug_log, "%p: set original destructor at %d [%d]\n",
-                                      ud, PL_savestack_ix, depth));
-  SAVEDESTRUCTOR_X(su_pop, ud);
- } else
-  su_localize(ud);
- ENTER;
+ su_init(level, ud, 3);
 
 void
 localize_elem(SV *sv, SV *elem, SV *val, ...)
@@ -538,13 +538,4 @@ CODE:
  ud->val  = newSVsv(val);
  SvREFCNT_inc(elem);
  ud->elem = elem;
- LEAVE;
- if (level) {
-  I32 depth = su_init(level, ud, 4);
-  SU_D(PerlIO_printf(Perl_debug_log, "%p: set original destructor at %d [%d]\n",
-                                      ud, PL_savestack_ix, depth));
-  SAVEDESTRUCTOR_X(su_pop, ud);
- } else
-  su_localize(ud);
- ENTER;
-
+ su_init(level, ud, 4);
