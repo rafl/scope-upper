@@ -165,10 +165,10 @@ typedef struct {
 #define SU_UD_ORIGIN(U)  (((su_ud_common *) (U))->origin)
 #define SU_UD_HANDLER(U) (((su_ud_common *) (U))->handler)
 
-#define SU_UD_FREE(U) do { \
+#define SU_UD_FREE(U) STMT_START { \
  if (SU_UD_ORIGIN(U)) Safefree(SU_UD_ORIGIN(U)); \
  Safefree(U); \
-} while (0)
+} STMT_END
 
 /* ... Reap ................................................................ */
 
