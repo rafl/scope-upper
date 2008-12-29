@@ -61,7 +61,9 @@ undef *x;
  is $x, 8, 'localize " $x", 3, 0 [end]';
 }
 
+SKIP:
 {
+ skip 'Can\'t localize through a reference in 5.6' => 2 if $] < 5.008;
  no strict 'refs';
  local ${''} = 9;
  {
@@ -71,7 +73,9 @@ undef *x;
  is ${''}, 9, 'localize "$", 4, 0 [end]';
 }
 
+SKIP:
 {
+ skip 'Can\'t localize through a reference in 5.6' => 2 if $] < 5.008;
  no strict 'refs';
  local ${''} = 10;
  {
