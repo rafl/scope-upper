@@ -111,13 +111,20 @@ Similar to L</localize> but for array and hash elements.
 If C<$what> is a glob, the slot to fill is determined from which type of reference C<$value> is ; otherwise it's inferred from the sigil.
 C<$key> is either an array index or a hash key, depending of which kind of variable you localize.
 
+=head2 C<localize_delete $what, $key, $level>
+
+Similiar to L</localize>, but for deleting objects or elements.
+If C<$what> is a glob, it's equivalent to C<local *x;>, and C<$key> is ignored.
+If C<$what> is a string beginning with C<'@'> or C<'%'>, it's equivalent to respectiveley C<local $a[$key]; delete $a[$key];> or C<local $h{$key}; delete $h{$key};>.
+If C<$what> is a string beginning with C<'&'>, it's more or less of equivalent to C<undef &func;>, but actually more powerful as C<&func> won't even C<exists> anymore.
+
 =head2 C<TOPLEVEL>
 
 Returns the level that currently represents the highest scope.
 
 =head1 EXPORT
 
-The functions L</reap>, L</localize>, L</localize_elem> and L</TOPLEVEL> are only exported on request, either individually or by the tags C<':funcs'> and C<':all'>.
+The functions L</reap>, L</localize>, L</localize_elem>, L</localize_delete> and L</TOPLEVEL> are only exported on request, either individually or by the tags C<':funcs'> and C<':all'>.
 
 =cut
 
@@ -125,7 +132,7 @@ use base qw/Exporter/;
 
 our @EXPORT      = ();
 our %EXPORT_TAGS = (
- funcs => [ qw/reap localize localize_elem TOPLEVEL/ ],
+ funcs => [ qw/reap localize localize_elem localize_delete TOPLEVEL/ ],
 );
 our @EXPORT_OK   = map { @$_ } values %EXPORT_TAGS;
 $EXPORT_TAGS{'all'} = [ @EXPORT_OK ];

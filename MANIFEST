@@ -21,6 +21,7 @@ t/31-localize_elem-level.t
 t/32-localize_elem-block.t
 t/38-localize_elem-magic.t
 t/39-localize_elem-target.t
+t/40-localize_delete.t
 t/90-boilerplate.t
 t/91-pod.t
 t/92-pod-coverage.t

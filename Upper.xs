@@ -252,10 +252,14 @@ STATIC void su_localize(pTHX_ void *ud_) {
 
  if (SvTYPE(sv) >= SVt_PVGV) {
   gv = (GV *) sv;
-  if (!SvROK(val))
+  if (!val) {               /* local *x; */
+   t = SVt_PVGV;
+  } else if (!SvROK(val)) { /* local *x = $val; */
    goto assign;
-  t = SvTYPE(SvRV(val));
-  deref = 1;
+  } else {                  /* local *x = \$val; */
+   t = SvTYPE(SvRV(val));
+   deref = 1;
+  }
  } else {
   STRLEN len, l;
   const char *p = SvPV_const(sv, len), *s;
@@ -271,16 +275,16 @@ STATIC void su_localize(pTHX_ void *ud_) {
    case '&': t = SVt_PVCV; break;
    case '*': t = SVt_PVGV; break;
   }
-  if (t == SVt_NULL) {
+  if (t != SVt_NULL) {
+   ++s;
+   --l;
+  } else if (val) { /* t == SVt_NULL, type can't be inferred from the sigil */
    if (SvROK(val) && !sv_isobject(val)) {
     t = SvTYPE(SvRV(val));
     deref = 1;
    } else {
     t = SvTYPE(val);
    }
-  } else {
-   ++s;
-   --l;
   }
   gv = gv_fetchpvn_flags(s, l, GV_ADDMULTI, SVt_PVGV);
  }
@@ -304,7 +308,12 @@ STATIC void su_localize(pTHX_ void *ud_) {
     if (!*svp || *svp == &PL_sv_undef) croak(PL_no_aelem, idx);
     su_save_aelem(av, idx, svp, preeminent);
     gv = (GV *) *svp;
-    goto maybe_deref;
+    if (val) { /* local $x[$idx] = $val; */
+     goto maybe_deref;
+    } else {   /* local $x[$idx]; delete $x[$idx]; */
+     av_delete(av, idx, G_DISCARD);
+     goto done;
+    }
    } else
     save_ary(gv);
    break;
@@ -317,7 +326,12 @@ STATIC void su_localize(pTHX_ void *ud_) {
     if (!svp || *svp == &PL_sv_undef) croak("Modification of non-creatable hash value attempted, subscript \"%s\"", SvPV_nolen_const(*svp));
     su_save_helem(hv, elem, svp, preeminent);
     gv = (GV *) *svp;
-    goto maybe_deref;
+    if (val) { /* local $x{$key} = $val; */
+     goto maybe_deref;
+    } else {   /* local $x{$key}; delete $x{$key}; */
+     hv_delete_ent(hv, elem, G_DISCARD, HeHASH(he));
+     goto done;
+    }
    } else
     save_hash(gv);
    break;
@@ -331,7 +345,7 @@ STATIC void su_localize(pTHX_ void *ud_) {
   default:
    gv = (GV *) save_scalar(gv);
 maybe_deref:
-   if (deref)
+   if (deref) /* val != NULL */
     val = SvRV(val);
    break;
  }
@@ -341,8 +355,10 @@ maybe_deref:
                                          PL_scopestack[PL_scopestack_ix]));
 
 assign:
- SvSetMagicSV((SV *) gv, val);
+ if (val)
+  SvSetMagicSV((SV *) gv, val);
 
+done:
  SvREFCNT_dec(ud->elem);
  SvREFCNT_dec(ud->val);
  SvREFCNT_dec(ud->sv);
@@ -536,6 +552,24 @@ CODE:
  SvREFCNT_inc(sv);
  ud->sv   = sv;
  ud->val  = newSVsv(val);
+ SvREFCNT_inc(elem);
+ ud->elem = elem;
+ su_init(level, ud, 4);
+
+void
+localize_delete(SV *sv, SV *elem, ...)
+PROTOTYPE: $$;$
+PREINIT:
+ I32 level = 0;
+ su_ud_localize *ud;
+CODE:
+ SU_GET_LEVEL(2);
+ Newx(ud, 1, su_ud_localize);
+ SU_UD_ORIGIN(ud)  = NULL;
+ SU_UD_HANDLER(ud) = su_localize;
+ SvREFCNT_inc(sv);
+ ud->sv   = sv;
+ ud->val  = NULL;
  SvREFCNT_inc(elem);
  ud->elem = elem;
  su_init(level, ud, 4);
