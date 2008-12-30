@@ -315,16 +315,14 @@ STATIC void su_localize(pTHX_ void *ud_) {
  switch (t) {
   case SVt_PVAV:
    if (elem) {
-    AV *av = GvAV(gv);
-    su_save_aelem(av, elem, val);
+    su_save_aelem(GvAV(gv), elem, val);
     goto done;
    } else
     save_ary(gv);
    break;
   case SVt_PVHV:
    if (elem) {
-    HV *hv = GvHV(gv);
-    su_save_helem(hv, elem, val);
+    su_save_helem(GvHV(gv), elem, val);
     goto done;
    } else
     save_hash(gv);
