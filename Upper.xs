@@ -71,18 +71,6 @@
 
 /* ... Saving array elements ............................................... */
 
-STATIC I32 su_av_preeminent(pTHX_ AV *av, I32 key) {
-#define su_av_preeminent(A, K) su_av_preeminent(aTHX_ (A), (K))
- MAGIC *mg;
- HV *stash;
-
- if (!av) return 0;
- if (SvCANEXISTDELETE(av))
-  return av_exists(av, key);
-
- return 1;
-}
-
 #ifndef SAVEADELETE
 
 typedef struct {
@@ -117,12 +105,15 @@ STATIC void su_save_adelete(pTHX_ AV *av, I32 key) {
 
 STATIC void su_save_aelem(pTHX_ AV *av, SV *key, SV *val) {
 #define su_save_aelem(A, K, V) su_save_aelem(aTHX_ (A), (K), (V))
- I32 idx;
- I32 preeminent;
+ I32 idx = SvIV(key);
+ I32 preeminent = 1;
  SV **svp;
+ HV *stash;
+ MAGIC *mg;
 
- idx = SvIV(key);
- preeminent = su_av_preeminent(av, idx);
+ if (SvCANEXISTDELETE(av))
+  preeminent = av_exists(av, idx);
+
  svp = av_fetch(av, idx, 1);
  if (!*svp || *svp == &PL_sv_undef) croak(PL_no_aelem, idx);
 
@@ -140,25 +131,17 @@ STATIC void su_save_aelem(pTHX_ AV *av, SV *key, SV *val) {
 
 /* ... Saving hash elements ................................................ */
 
-STATIC I32 su_hv_preeminent(pTHX_ HV *hv, SV *keysv) {
-#define su_hv_preeminent(H, K) su_hv_preeminent(aTHX_ (H), (K))
- MAGIC *mg;
- HV *stash;
-
- if (!hv) return 0;
- if (SvCANEXISTDELETE(hv) || mg_find((SV *) hv, PERL_MAGIC_env))
-  return hv_exists_ent(hv, keysv, 0);
-
- return 1;
-}
-
 STATIC void su_save_helem(pTHX_ HV *hv, SV *keysv, SV *val) {
 #define su_save_helem(H, K, V) su_save_helem(aTHX_ (H), (K), (V))
- I32 preeminent;
+ I32 preeminent = 1;
  HE *he;
  SV **svp;
+ HV *stash;
+ MAGIC *mg;
 
- preeminent = su_hv_preeminent(hv, keysv);
+ if (SvCANEXISTDELETE(hv) || mg_find((SV *) hv, PERL_MAGIC_env))
+  preeminent = hv_exists_ent(hv, keysv, 0);
+
  he  = hv_fetch_ent(hv, keysv, 1, 0);
  svp = he ? &HeVAL(he) : NULL;
  if (!svp || *svp == &PL_sv_undef) croak("Modification of non-creatable hash value attempted, subscript \"%s\"", SvPV_nolen_const(*svp));
