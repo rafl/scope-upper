@@ -115,12 +115,27 @@ STATIC void su_save_adelete(pTHX_ AV *av, I32 key) {
 
 #endif /* SAVEADELETE */
 
-STATIC void su_save_aelem(pTHX_ AV *av, I32 key, SV **svp, I32 preeminent) {
-#define su_save_aelem(A, K, S, P) su_save_aelem(aTHX_ (A), (K), (S), (P))
+STATIC void su_save_aelem(pTHX_ AV *av, SV *key, SV *val) {
+#define su_save_aelem(A, K, V) su_save_aelem(aTHX_ (A), (K), (V))
+ I32 idx;
+ I32 preeminent;
+ SV **svp;
+
+ idx = SvIV(key);
+ preeminent = su_av_preeminent(av, idx);
+ svp = av_fetch(av, idx, 1);
+ if (!*svp || *svp == &PL_sv_undef) croak(PL_no_aelem, idx);
+
  if (preeminent)
-  save_aelem(av, key, svp);
+  save_aelem(av, idx, svp);
  else
-  SAVEADELETE(av, key);
+  SAVEADELETE(av, idx);
+
+ if (val) { /* local $x[$idx] = $val; */
+  SvSetMagicSV(*svp, val);
+ } else {   /* local $x[$idx]; delete $x[$idx]; */
+  av_delete(av, idx, G_DISCARD);
+ }
 }
 
 /* ... Saving hash elements ................................................ */
@@ -137,12 +152,22 @@ STATIC I32 su_hv_preeminent(pTHX_ HV *hv, SV *keysv) {
  return 1;
 }
 
-STATIC void su_save_helem(pTHX_ HV *hv, SV *keysv, SV **svp, I32 preeminent) {
-#define su_save_helem(H, K, S, P) su_save_helem(aTHX_ (H), (K), (S), (P))
+STATIC void su_save_helem(pTHX_ HV *hv, SV *keysv, SV *val) {
+#define su_save_helem(H, K, V) su_save_helem(aTHX_ (H), (K), (V))
+ I32 preeminent;
+ HE *he;
+ SV **svp;
+
+ preeminent = su_hv_preeminent(hv, keysv);
+ he  = hv_fetch_ent(hv, keysv, 1, 0);
+ svp = he ? &HeVAL(he) : NULL;
+ if (!svp || *svp == &PL_sv_undef) croak("Modification of non-creatable hash value attempted, subscript \"%s\"", SvPV_nolen_const(*svp));
+
  if (HvNAME_get(hv) && isGV(*svp)) {
   save_gp((GV *) *svp, 0);
   return;
  }
+
  if (preeminent)
   save_helem(hv, keysv, svp);
  else {
@@ -150,6 +175,12 @@ STATIC void su_save_helem(pTHX_ HV *hv, SV *keysv, SV **svp, I32 preeminent) {
   const char * const key = SvPV_const(keysv, keylen);
   SAVEDELETE(hv, savepvn(key, keylen),
                  SvUTF8(keysv) ? -(I32)keylen : (I32)keylen);
+ }
+
+ if (val) { /* local $x{$keysv} = $val; */
+  SvSetMagicSV(*svp, val);
+ } else {   /* local $x{$keysv}; delete $x{$keysv}; */
+  hv_delete_ent(hv, keysv, G_DISCARD, HeHASH(he));
  }
 }
 
@@ -301,37 +332,17 @@ STATIC void su_localize(pTHX_ void *ud_) {
  switch (t) {
   case SVt_PVAV:
    if (elem) {
-    I32 idx  = SvIV(elem);
-    AV *av   = GvAV(gv);
-    I32 preeminent = su_av_preeminent(av, idx);
-    SV **svp = av_fetch(av, idx, 1);
-    if (!*svp || *svp == &PL_sv_undef) croak(PL_no_aelem, idx);
-    su_save_aelem(av, idx, svp, preeminent);
-    gv = (GV *) *svp;
-    if (val) { /* local $x[$idx] = $val; */
-     goto maybe_deref;
-    } else {   /* local $x[$idx]; delete $x[$idx]; */
-     av_delete(av, idx, G_DISCARD);
-     goto done;
-    }
+    AV *av = GvAV(gv);
+    su_save_aelem(av, elem, val);
+    goto done;
    } else
     save_ary(gv);
    break;
   case SVt_PVHV:
    if (elem) {
-    HV *hv   = GvHV(gv);
-    I32 preeminent = su_hv_preeminent(hv, elem);
-    HE *he   = hv_fetch_ent(hv, elem, 1, 0);
-    SV **svp = he ? &HeVAL(he) : NULL;
-    if (!svp || *svp == &PL_sv_undef) croak("Modification of non-creatable hash value attempted, subscript \"%s\"", SvPV_nolen_const(*svp));
-    su_save_helem(hv, elem, svp, preeminent);
-    gv = (GV *) *svp;
-    if (val) { /* local $x{$key} = $val; */
-     goto maybe_deref;
-    } else {   /* local $x{$key}; delete $x{$key}; */
-     hv_delete_ent(hv, elem, G_DISCARD, HeHASH(he));
-     goto done;
-    }
+    HV *hv = GvHV(gv);
+    su_save_helem(hv, elem, val);
+    goto done;
    } else
     save_hash(gv);
    break;
