@@ -3,11 +3,79 @@
 use strict;
 use warnings;
 
-use Test::More tests => 28;
+use Test::More tests => 44;
 
 use Scope::Upper qw/localize/;
 
 our ($x, $y);
+
+{
+ local $x = 1;
+ {
+  local $x = 2;
+  localize '$y' => 1 => 0;
+  is $x, 2, 'last 0 [ok - x]';
+  is $y, 1, 'last 0 [ok - y]';
+  last;
+  $y = 2;
+ }
+ is $x, 1,     'last 0 [end - x]';
+ is $y, undef, 'last 0 [end - y]';
+}
+
+{
+ local $x = 1;
+LOOP:
+ {
+  local $x = 2;
+  local $y = 0;
+  {
+   local $x = 3;
+   localize '$y' => 1 => 1;
+   is $x, 3, 'last 1 [ok - x]';
+   is $y, 0, 'last 1 [ok - y]';
+   last LOOP;
+   $y = 3;
+  }
+  $y = 2;
+ }
+ is $x, 1,     'last 1 [end - x]';
+ is $y, undef, 'last 1 [end - y]';
+}
+
+{
+ local $x = 1;
+ {
+  local $x = 2;
+  localize '$y' => 1 => 0;
+  is $x, 2, 'next 0 [ok - x]';
+  is $y, 1, 'next 0 [ok - y]';
+  next;
+  $y = 2;
+ }
+ is $x, 1,     'next 0 [end - x]';
+ is $y, undef, 'next 0 [end - y]';
+}
+
+{
+ local $x = 1;
+LOOP:
+ {
+  local $x = 2;
+  local $y = 0;
+  {
+   local $x = 3;
+   localize '$y' => 1 => 1;
+   is $x, 3, 'next 1 [ok - x]';
+   is $y, 0, 'next 1 [ok - y]';
+   next LOOP;
+   $y = 3;
+  }
+  $y = 2;
+ }
+ is $x, 1,     'next 1 [end - x]';
+ is $y, undef, 'next 1 [end - y]';
+}
 
 {
  local $x = 1;
