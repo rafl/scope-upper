@@ -2,12 +2,12 @@ NAME
     Scope::Upper - Act on upper scopes.
 
 VERSION
-    Version 0.02
+    Version 0.03
 
 SYNOPSIS
         package X;
 
-        use Scope::Upper qw/reap localize localize_elem/;
+        use Scope::Upper qw/reap localize localize_elem localize_delete/;
 
         sub desc { shift->{desc} }
 
@@ -28,13 +28,15 @@ SYNOPSIS
           my $x = do { no strict 'refs'; ${$pkg.'::x'} }; # Get the $x in the scope
           CORE::warn($x->desc . ': ' . join('', @_));
          } => 1;
+
+         localize_delete '@ARGV', $#ARGV => 1; # delete last @ARGV element
         }
 
         package Y;
 
         {
          X::set_tag('pie');
-         # $x is now a X object
+         # $x is now a X object, and @ARGV has one element less
          warn 'what'; # warns "pie: what at ..."
          ...
         } # "pie: done" is printed
@@ -42,7 +44,8 @@ SYNOPSIS
 DESCRIPTION
     This module lets you defer actions that will take place when the control
     flow returns into an upper scope. Currently, you can hook an upper scope
-    end, or localize variables and array/hash values in higher contexts.
+    end, or localize variables, array/hash values or deletions of elements
+    in higher contexts.
 
 FUNCTIONS
   "reap $callback, $level"
@@ -84,13 +87,28 @@ FUNCTIONS
     is ; otherwise it's inferred from the sigil. $key is either an array
     index or a hash key, depending of which kind of variable you localize.
 
+  "localize_delete $what, $key, $level"
+    Similiar to "localize", but for deleting variables or array/hash
+    elements. $what can be:
+
+    *   A glob, in which case $key is ignored and the call is equivalent to
+        "local *x".
+
+    *   A string beginning with '@' or '%', for which the call is equivalent
+        to respectiveley "local $a[$key]; delete $a[$key]" and "local
+        $h{$key}; delete $h{$key}".
+
+    *   A string beginning with '&', which more or less does "undef &func"
+        in the upper scope. It's actually more powerful, as &func won't even
+        "exists" anymore. $key is ignored.
+
   "TOPLEVEL"
     Returns the level that currently represents the highest scope.
 
 EXPORT
-    The functions "reap", "localize", "localize_elem" and "TOPLEVEL" are
-    only exported on request, either individually or by the tags ':funcs'
-    and ':all'.
+    The functions "reap", "localize", "localize_elem", "localize_delete" and
+    "TOPLEVEL" are only exported on request, either individually or by the
+    tags ':funcs' and ':all'.
 
 CAVEATS
     Be careful that local variables are restored in the reverse order in
@@ -149,7 +167,7 @@ ACKNOWLEDGEMENTS
     Inspired by Ricardo Signes.
 
 COPYRIGHT & LICENSE
-    Copyright 2008 Vincent Pit, all rights reserved.
+    Copyright 2008-2009 Vincent Pit, all rights reserved.
 
     This program is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself.

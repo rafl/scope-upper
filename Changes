@@ -1,5 +1,11 @@
 Revision history for Scope-Upper
 
+0.03    2009-01-04 15:55 UTC
+        + Add : localize_delete(), that localize array/hash elements in upper
+                scopes.
+        + Fix : Segfault when localizing array elements with an invalid negative
+                index.
+
 0.02    2008-12-28 18:40 UTC
         + Doc : Clarifications and improvements.
         + Fix : Missing compatibility macros.
