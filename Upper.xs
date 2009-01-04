@@ -115,7 +115,7 @@ STATIC void su_save_aelem(pTHX_ AV *av, SV *key, SV *val) {
   preeminent = av_exists(av, idx);
 
  svp = av_fetch(av, idx, 1);
- if (!*svp || *svp == &PL_sv_undef) croak(PL_no_aelem, idx);
+ if (!svp || *svp == &PL_sv_undef) croak(PL_no_aelem, idx);
 
  if (preeminent)
   save_aelem(av, idx, svp);

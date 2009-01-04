@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 17;
+use Test::More tests => 21;
 
 use Scope::Upper qw/localize_elem/;
 
@@ -27,6 +27,24 @@ our @a;
   is_deeply \@a, [ 4 .. 6, undef, 8 ], 'localize_elem "@a", 4, 8, 0 [ok]';
  }
  is_deeply \@a, [ 4 .. 6 ], 'localize_elem "@a", 4, 8, 0 [end]';
+}
+
+{
+ local @a = (4 .. 6);
+ {
+  localize_elem '@main::a', -2, 8, 0;
+  is_deeply \@a, [ 4, 8, 6 ], 'localize_elem "@a", -2, 8, 0 [ok]';
+ }
+ is_deeply \@a, [ 4 .. 6 ], 'localize_elem "@a", -2, 8, 0 [end]';
+}
+
+{
+ local @a = (4 .. 6);
+ {
+  eval { localize_elem '@main::a', -4, 8, 0 };
+  like $@, qr/Modification of non-creatable array value attempted, subscript -4/, 'localize_elem "@a", -4, 8, 0 [ok]';
+ }
+ is_deeply \@a, [ 4 .. 6 ], 'localize_elem "@a", -4, 8, 0 [end]';
 }
 
 {
