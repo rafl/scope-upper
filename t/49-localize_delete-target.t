@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 30;
+use Test::More tests => 36;
 
 use Scope::Upper qw/localize_delete/;
 
@@ -37,6 +37,34 @@ our @a;
   is_deeply \@a, [ 4 .. 6 ], 'localize_delete "@a", 4 (exists), 0 [ok]';
  }
  is_deeply \@a, [ 4 .. 6, undef, 7 ], 'localize_delete "@a", 4 (exists), 0 [end]';
+}
+
+{
+ local @a = (4 .. 6);
+ {
+  localize_delete '@main::a', -2, 0;
+  is_deeply \@a, [ 4, undef, 6 ], 'localize_delete "@a", -2, 0 [ok]';
+ }
+ is_deeply \@a, [ 4 .. 6 ], 'localize_delete "@a", -2, 0 [end]';
+}
+
+{
+ local @a = (4 .. 6);
+ local $a[4] = 7;
+ {
+  localize_delete '@main::a', -1, 0;
+  is_deeply \@a, [ 4 .. 6 ], 'localize_delete "@a", -1 (exists), 0 [ok]';
+ }
+ is_deeply \@a, [ 4 .. 6, undef, 7 ], 'localize_delete "@a", -1 (exists), 0 [end]';
+}
+
+{
+ local @a = (4 .. 6);
+ {
+  eval { localize_delete '@main::a', -4, 0 };
+  like $@, qr/Modification of non-creatable array value attempted, subscript -4/, 'localize_delete "@a", -4 (out of bounds), 0 [ok]';
+ }
+ is_deeply \@a, [ 4 .. 6 ], 'localize_delete "@a", -4 (out of bounds), 0 [end]';
 }
 
 {

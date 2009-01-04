@@ -54,6 +54,10 @@
 # define PERL_MAGIC_env 'E'
 #endif
 
+#ifndef NEGATIVE_INDICES_VAR
+# define NEGATIVE_INDICES_VAR "NEGATIVE_INDICES"
+#endif
+
 #define SU_HAS_PERL(R, V, S) (PERL_REVISION > (R) || (PERL_REVISION == (R) && (PERL_VERSION > (V) || (PERL_VERSION == (V) && (PERL_SUBVERSION >= (S))))))
 
 /* --- Stack manipulations ------------------------------------------------- */
@@ -71,29 +75,58 @@
 
 /* ... Saving array elements ............................................... */
 
+STATIC I32 su_av_key2idx(pTHX_ AV *av, I32 key) {
+#define su_av_key2idx(A, K) su_av_key2idx(aTHX_ (A), (K))
+ I32 idx;
+
+ if (key >= 0)
+  return key;
+
+/* Added by MJD in perl-5.8.1 with 6f12eb6d2a1dfaf441504d869b27d2e40ef4966a */
+#if SU_HAS_PERL(5, 8, 1)
+ if (SvRMAGICAL(av)) {
+  const MAGIC * const tied_magic = mg_find((SV *) av, PERL_MAGIC_tied);
+  if (tied_magic) {
+   int adjust_index = 1;
+   SV * const * const negative_indices_glob =
+                    hv_fetch(SvSTASH(SvRV(SvTIED_obj((SV *) (av), tied_magic))),
+                             NEGATIVE_INDICES_VAR, 16, 0);
+   if (negative_indices_glob && SvTRUE(GvSV(*negative_indices_glob)))
+    return key;
+  }
+ }
+#endif
+
+ idx = key + av_len(av) + 1;
+ if (idx < 0)
+  return key;
+
+ return idx;
+}
+
 #ifndef SAVEADELETE
 
 typedef struct {
  AV *av;
- I32 key;
+ I32 idx;
 } su_ud_adelete;
 
 STATIC void su_adelete(pTHX_ void *ud_) {
  su_ud_adelete *ud = ud_;
 
- av_delete(ud->av, ud->key, G_DISCARD);
+ av_delete(ud->av, ud->idx, G_DISCARD);
  SvREFCNT_dec(ud->av);
 
  Safefree(ud);
 }
 
-STATIC void su_save_adelete(pTHX_ AV *av, I32 key) {
+STATIC void su_save_adelete(pTHX_ AV *av, I32 idx) {
 #define su_save_adelete(A, K) su_save_adelete(aTHX_ (A), (K))
  su_ud_adelete *ud;
 
  Newx(ud, 1, su_ud_adelete);
  ud->av  = av;
- ud->key = key;
+ ud->idx = idx;
  SvREFCNT_inc(av);
 
  SAVEDESTRUCTOR_X(su_adelete, ud);
@@ -105,11 +138,13 @@ STATIC void su_save_adelete(pTHX_ AV *av, I32 key) {
 
 STATIC void su_save_aelem(pTHX_ AV *av, SV *key, SV *val) {
 #define su_save_aelem(A, K, V) su_save_aelem(aTHX_ (A), (K), (V))
- I32 idx = SvIV(key);
+ I32 idx;
  I32 preeminent = 1;
  SV **svp;
  HV *stash;
  MAGIC *mg;
+
+ idx = su_av_key2idx(av, SvIV(key));
 
  if (SvCANEXISTDELETE(av))
   preeminent = av_exists(av, idx);
