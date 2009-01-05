@@ -7,17 +7,17 @@ use Test::More tests => 33;
 
 use Scope::Upper qw/:words/;
 
-is CURRENT, 0, 'main : current';
-is TOP, 0, 'main : top';
-is UP, 0, 'main : up';
+is HERE, 0, 'main : here';
+is TOP,  0, 'main : top';
+is UP,   0, 'main : up';
 is DOWN, 0, 'main : down';
-is SUB, undef, 'main : sub';
+is SUB,  undef, 'main : sub';
 is EVAL, undef, 'main : eval';
 
 {
- is CURRENT, 0, '{ 1 } : current';
- is TOP, 1, '{ 1 } : top';
- is UP, 1, '{ 1 } : up';
+ is HERE, 0, '{ 1 } : here';
+ is TOP,  1, '{ 1 } : top';
+ is UP,   1, '{ 1 } : up';
  is DOWN, 0, '{ 1 } : down';
  is DOWN(UP), 0, '{ 1 } : up then down';
  is UP(DOWN), 1, '{ 1 } : down then up';
@@ -61,12 +61,12 @@ do {
    sub {
     eval q[
      {
-      is CURRENT, 0, 'mixed : current';
-      is TOP, 6, 'mixed : top';
-      is SUB, 2, 'mixed : first sub';
+      is HERE, 0, 'mixed : here';
+      is TOP,  6, 'mixed : top';
+      is SUB,  2, 'mixed : first sub';
       is SUB(SUB), 2, 'mixed : still first sub';
       is EVAL, 1, 'mixed : first eval';
-      is EVAL(EVAL), 1, 'mixed : still first eval';
+      is EVAL(EVAL),     1, 'mixed : still first eval';
       is EVAL(UP(EVAL)), 4, 'mixed : second eval';
      }
     ];

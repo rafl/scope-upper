@@ -545,7 +545,7 @@ PROTOTYPES: ENABLE
 BOOT:
 {
  HV *stash = gv_stashpv(__PACKAGE__, 1);
- newCONSTSUB(stash, "CURRENT", newSViv(0));
+ newCONSTSUB(stash, "HERE", newSViv(0));
 }
 
 SV *
