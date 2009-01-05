@@ -136,13 +136,39 @@ C<$key> is ignored.
 
 =back
 
-=head2 C<TOPLEVEL>
+=head1 WORDS
+
+=head2 C<TOP>
 
 Returns the level that currently represents the highest scope.
 
+=head2 C<CURRENT>
+
+The current level - i.e. C<0>.
+
+=head2 C<UP $from>
+
+The level of the scope just above C<$from>.
+
+=head2 C<DOWN $from>
+
+The level of the scope just below C<$from>.
+
+=head2 C<SUB $from>
+
+The level of the closest subroutine context above C<$from>.
+
+=head2 C<EVAL $from>
+
+The level of the closest eval context above C<$from>.
+
+If C<$from> is omitted in any of those functions, the current level is used as the reference level.
+
 =head1 EXPORT
 
-The functions L</reap>, L</localize>, L</localize_elem>, L</localize_delete> and L</TOPLEVEL> are only exported on request, either individually or by the tags C<':funcs'> and C<':all'>.
+The functions L</reap>, L</localize>, L</localize_elem> and L</localize_delete> are only exported on request, either individually or by the tags C<':funcs'> and C<':all'>.
+
+Same goes for the words L</TOP>, L</CURRENT>, L</UP>, L</DOWN>, L</SUB> and L</EVAL> that are only exported on request, individually or by the tags C<':words'> and C<':all'>.
 
 =cut
 
@@ -150,7 +176,8 @@ use base qw/Exporter/;
 
 our @EXPORT      = ();
 our %EXPORT_TAGS = (
- funcs => [ qw/reap localize localize_elem localize_delete TOPLEVEL/ ],
+ funcs => [ qw/reap localize localize_elem localize_delete/ ],
+ words => [ qw/TOP CURRENT UP DOWN SUB EVAL/ ],
 );
 our @EXPORT_OK   = map { @$_ } values %EXPORT_TAGS;
 $EXPORT_TAGS{'all'} = [ @EXPORT_OK ];

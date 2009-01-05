@@ -6,6 +6,8 @@
 #include "perl.h" 
 #include "XSUB.h"
 
+#define __PACKAGE__ "Scope::Upper"
+
 #ifndef SU_DEBUG
 # define SU_DEBUG 0
 #endif
@@ -520,19 +522,80 @@ done:
  if (level > cxstack_ix) \
   level = cxstack_ix;
 
+#define SU_DOPOPTOCX(t)                    \
+ STMT_START {                              \
+  I32 i, cxix = cxstack_ix, from = 0;      \
+  if (items)                               \
+   from = SvIV(ST(0));                     \
+  for (i = cxix - from; i >= 0; --i) {     \
+   if (CxTYPE(&cxstack[i]) == t) {         \
+    ST(0) = sv_2mortal(newSViv(cxix - i)); \
+    XSRETURN(1);                           \
+   }                                       \
+  }                                        \
+  XSRETURN_UNDEF;                          \
+ } STMT_END
+
 /* --- XS ------------------------------------------------------------------ */
 
 MODULE = Scope::Upper            PACKAGE = Scope::Upper
 
 PROTOTYPES: ENABLE
 
+BOOT:
+{
+ HV *stash = gv_stashpv(__PACKAGE__, 1);
+ newCONSTSUB(stash, "CURRENT", newSViv(0));
+}
+
 SV *
-TOPLEVEL()
+TOP()
 PROTOTYPE:
 CODE:
  RETVAL = newSViv(cxstack_ix);
 OUTPUT:
  RETVAL
+
+SV *
+UP(...)
+PROTOTYPE: ;$
+PREINIT:
+ I32 i = 0;
+ I32 cxix = cxstack_ix;
+CODE:
+ if (items)
+  i = SvIV(ST(0));
+ if (++i > cxix)
+  i = cxix;
+ RETVAL = newSViv(i);
+OUTPUT:
+ RETVAL
+
+SV *
+DOWN(...)
+PROTOTYPE: ;$
+PREINIT:
+ I32 i = 0;
+CODE:
+ if (items)
+  i = SvIV(ST(0));
+ if (--i < 0)
+  i = 0;
+ RETVAL = newSViv(i);
+OUTPUT:
+ RETVAL
+
+void
+SUB(...)
+PROTOTYPE: ;$
+PPCODE:
+ SU_DOPOPTOCX(CXt_SUB);
+
+void
+EVAL(...)
+PROTOTYPE: ;$
+PPCODE:
+ SU_DOPOPTOCX(CXt_EVAL);
 
 void
 reap(SV *hook, ...)
