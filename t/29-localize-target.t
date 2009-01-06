@@ -64,25 +64,29 @@ undef *x;
 SKIP:
 {
  skip 'Can\'t localize through a reference in 5.6' => 2 if $] < 5.008;
- no strict 'refs';
- local ${''} = 9;
- {
-  localize '$', 4, 0;
-  is ${''}, 4, 'localize "$", 4, 0 [ok]';
- }
- is ${''}, 9, 'localize "$", 4, 0 [end]';
+ eval q{
+  no strict 'refs';
+  local ${''} = 9;
+  {
+   localize '$', 4, 0;
+   is ${''}, 4, 'localize "$", 4, 0 [ok]';
+  }
+  is ${''}, 9, 'localize "$", 4, 0 [end]';
+ };
 }
 
 SKIP:
 {
  skip 'Can\'t localize through a reference in 5.6' => 2 if $] < 5.008;
- no strict 'refs';
- local ${''} = 10;
- {
-  localize '', 5, 0;
-  is ${''}, 5, 'localize "", 4, 0 [ok]';
- }
- is ${''}, 10, 'localize "", 4, 0 [end]';
+ eval q{
+  no strict 'refs';
+  local ${''} = 10;
+  {
+   localize '', 5, 0;
+   is ${''}, 5, 'localize "", 4, 0 [ok]';
+  }
+  is ${''}, 10, 'localize "", 4, 0 [end]';
+ };
 }
 
 {
