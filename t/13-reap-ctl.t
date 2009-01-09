@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 28;
+use Test::More tests => 38;
 
 use Scope::Upper qw/reap/;
 
@@ -120,4 +120,40 @@ $y = undef;
  };
  is $x, 1, 'die - reap inside eval [ok - x]';
  is $y, 1, 'die - reap inside eval [ok - y]';
+}
+
+$y = undef;
+{
+ local $x = 1;
+ eval {
+  local $x = 2;
+  eval {
+   local $x = 3;
+   reap { ++$y; die "reaped\n" } => 0;
+   is $x, 3,     'die in reap at eval [not yet - x]';
+   is $y, undef, 'die in reap at eval [not yet - y]';
+  }; # should trigger here, but the die isn't catched by this eval
+  die "failed\n";
+ };
+ is $@, "reaped\n", 'die in reap at eval [ok - $@]';
+ is $x, 1, 'die in reap at eval [ok - x]';
+ is $y, 1, 'die in reap at Eval [ok - y]';
+}
+
+$y = undef;
+{
+ local $x = 1;
+ eval {
+  local $x = 2;
+  {
+   local $x = 3;
+   reap { ++$y; die "reaped\n" } => 0;
+   is $x, 3,     'die in reap inside eval [not yet - x]';
+   is $y, undef, 'die in reap inside eval [not yet - y]';
+  } # should trigger here
+  die "failed\n";
+ };
+ is $@, "reaped\n", 'die in reap inside eval [ok - $@]';
+ is $x, 1, 'die in reap inside eval [ok - x]';
+ is $y, 1, 'die in reap inside eval [ok - y]';
 }
