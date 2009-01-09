@@ -3,26 +3,13 @@
 use strict;
 use warnings;
 
-use Test::More tests => 4 + 10 + 6 + 5 + 6;
+use Test::More tests => 10 + 5 + 6;
 
 use Scope::Upper qw/localize/;
 
 our $x;
 
 sub loc { local $x; my $y = $_[1]; localize '$x', $y, $_[0] + 1 }
-
-$x = 0;
-{
- is($x, 0, 'start');
- local $x = 7;
- {
-  local $x = 8;
-  loc(0, 1);
-  is($x, 1, 'localized to 1');
- }
- is($x, 7, 'no longer localized');
-}
-is($x, 0, 'end');
 
 $x = 0;
 {
@@ -46,27 +33,6 @@ $x = 0;
   is($x, 1, 'localized to 1');
  }
  is($x, 1, 'localized to 1');
-}
-is($x, 0, 'end');
-
-$x = 0;
-{
- is($x, 0, 'start');
- local $x = 7;
- {
-  local $x = 8;
-  {
-   local $x = 9;
-   {
-    local $x = 10;
-    loc(2, 1);
-    is($x, 10, 'not localized');
-   }
-   is($x, 9, 'not localized');
-  }
-  is($x, 1, 'localized to 1');
- }
- is($x, 7, 'no longer localized');
 }
 is($x, 0, 'end');
 

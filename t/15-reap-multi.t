@@ -3,41 +3,13 @@
 use strict;
 use warnings;
 
-use Test::More tests => 4 + 8 + 8 + 18 + 4 + 8 + 6 + 11 + 5 + 17;
+use Test::More tests => 8 + 18 + 4 + 8 + 11 + 5 + 17;
 
 use Scope::Upper qw/reap/;
 
 my $x;
 
 sub add { local $_; my $y = $_[1]; reap sub { $x += $y }, $_[0] + 1 }
-
-$x = 0;
-{
- is($x, 0, 'start');
- {
-  add(0, 1);
-  is($x, 0, '1 didn\'t run');
- }
- is($x, 1, '1 ran');
-}
-is($x, 1, 'end');
-
-$x = 0;
-{
- is($x, 0, 'start');
- local $_ = 3;
- is($_, 3, '$_ has the right value');
- {
-  add(0, 1);
-  is($_, 3, '$_ has the right value');
-  local $_ = 7;
-  is($_, 7, '$_ has the right value');
-  is($x, 0, '1 didn\'t run');
- }
- is($x, 1, '1 ran');
- is($_, 3, '$_ has the right value');
-}
-is($x, 1, 'end');
 
 $x = 0;
 {
@@ -127,23 +99,6 @@ $x = 0;
  is($_, 3, '$_ has the right value');
 }
 is($x, 3, 'end');
-
-$x = 0;
-{
- is($x, 0, 'start');
- {
-  {
-   {
-    add(2, 1);
-    is($x, 0, '1 didn\'t run');
-   }
-   is($x, 0, '1 didn\'t run');
-  }
-  is($x, 0, '1 didn\'t run');
- }
- is($x, 1, '1 ran');
-}
-is($x, 1, 'end');
 
 $x = 0;
 {
