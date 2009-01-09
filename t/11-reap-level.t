@@ -42,7 +42,7 @@ DIAG
  }
 }
 
-for my $level (0 .. 4) {
+for my $level (0 .. 2) {
  for my $height ($level + 1 .. $level + 2) {
   my $tests = Scope::Upper::TestGenerator::gen($height, $level);
   for (@$tests) {
