@@ -114,7 +114,7 @@ typedef struct {
 } su_ud_adelete;
 
 STATIC void su_adelete(pTHX_ void *ud_) {
- su_ud_adelete *ud = ud_;
+ su_ud_adelete *ud = (su_ud_adelete *) ud_;
 
  av_delete(ud->av, ud->idx, G_DISCARD);
  SvREFCNT_dec(ud->av);
