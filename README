@@ -2,7 +2,7 @@ NAME
     Scope::Upper - Act on upper scopes.
 
 VERSION
-    Version 0.03
+    Version 0.04
 
 SYNOPSIS
         package X;
@@ -40,6 +40,26 @@ SYNOPSIS
          warn 'what'; # warns "pie: what at ..."
          ...
         } # "pie: done" is printed
+
+        package Z;
+
+        use Scope::Upper qw/unwind want_at :words/;
+
+        sub try (&) {
+         my @result = shift->();
+         my $cx = SUB UP SUB;
+         unwind +(want_at($cx) ? @result : scalar @result) => $cx;
+        }
+
+        ...
+
+        sub zap {
+         try {
+          return @things; # returns to try() and then outside zap()
+         }
+        }
+
+        my @what = zap(); # @what contains @things
 
 DESCRIPTION
     This module lets you defer actions that will take place when the control
@@ -102,13 +122,48 @@ FUNCTIONS
         in the upper scope. It's actually more powerful, as &func won't even
         "exists" anymore. $key is ignored.
 
-  "TOPLEVEL"
+  "unwind @values, $level"
+    Returns @values *from* the context indicated by $level, i.e. from the
+    subroutine, eval or format just above $level. The upper level isn't
+    coerced onto @values, which is hence always evaluated in list context.
+
+  "want_at $level"
+    Like "wantarray", but for the subroutine/eval/format context just above
+    $level.
+
+WORDS
+  "TOP"
     Returns the level that currently represents the highest scope.
 
+  "HERE"
+    The current level - i.e. 0.
+
+  "UP $from"
+    The level of the scope just above $from.
+
+  "DOWN $from"
+    The level of the scope just below $from.
+
+  "SUB $from"
+    The level of the closest subroutine context above $from.
+
+  "EVAL $from"
+    The level of the closest eval context above $from.
+
+    If $from is omitted in any of those functions, the current level is used
+    as the reference level.
+
+  "CALLER $stack"
+    The level corresponding to the stack referenced by "caller $stack".
+
 EXPORT
-    The functions "reap", "localize", "localize_elem", "localize_delete" and
-    "TOPLEVEL" are only exported on request, either individually or by the
-    tags ':funcs' and ':all'.
+    The functions "reap", "localize", "localize_elem", "localize_delete",
+    "unwind" and "want_at" are only exported on request, either individually
+    or by the tags ':funcs' and ':all'.
+
+    Same goes for the words "TOP", "HERE", "UP", "DOWN", "SUB", "EVAL" and
+    "CALLER" that are only exported on request, individually or by the tags
+    ':words' and ':all'.
 
 CAVEATS
     Be careful that local variables are restored in the reverse order in

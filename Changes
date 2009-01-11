@@ -1,5 +1,14 @@
 Revision history for Scope-Upper
 
+0.04    2009-01-11 18:40 UTC
+        + Add : unwind(@things, $level), that returns to an upper context.
+        + Add : want_at($level), that gives the wantarray for $level.
+        + Add : Control words, to reliably get the level of the n-th upper
+                subroutine or eval scope. TOPLEVEL was renamed to TOP.
+        + Fix : Tests with 5.6.
+        + Tst : Reordering and factoring some of the stress tests so that they
+                aren't needlessly ran several times.
+
 0.03    2009-01-04 15:55 UTC
         + Add : localize_delete(), that localize array/hash elements in upper
                 scopes.

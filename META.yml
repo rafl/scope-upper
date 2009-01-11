@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Scope-Upper
-version:            0.03
+version:            0.04
 abstract:           Act on upper scopes.
 author:
     - Vincent Pit <perl@profvince.com>
