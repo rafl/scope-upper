@@ -529,6 +529,8 @@ STATIC void su_unwind(pTHX_ void *ud_) {
  I32 items = ud->items - 1;
  I32 gimme, mark;
 
+ gimme = GIMME_V;
+
  if (cxstack_ix > cxix)
   dounwind(cxix);
 
@@ -538,7 +540,6 @@ STATIC void su_unwind(pTHX_ void *ud_) {
 
  mark = PL_markstack[cxstack[cxix].blk_oldmarksp];
 
- gimme = GIMME_V;
  if (gimme == G_SCALAR) {
   *PL_markstack_ptr = PL_stack_sp - PL_stack_base;
   PL_stack_sp += items;
