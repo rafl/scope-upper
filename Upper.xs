@@ -565,29 +565,36 @@ STATIC void su_unwind(pTHX_ void *ud_) {
 
 /* --- XS ------------------------------------------------------------------ */
 
-#define SU_GET_LEVEL(A)  \
- if (items > A) {        \
-  SV *lsv = ST(A);       \
-  if (SvOK(lsv))         \
-   level = SvIV(lsv);    \
-  if (level < 0)         \
-   XSRETURN(0);          \
- }                       \
- if (level > cxstack_ix) \
-  level = cxstack_ix;
+#define SU_GET_LEVEL(A)   \
+ STMT_START {             \
+  if (items > A) {        \
+   SV *lsv = ST(A);       \
+   if (SvOK(lsv))         \
+    level = SvIV(lsv);    \
+   if (level < 0)         \
+    XSRETURN(0);          \
+  }                       \
+  if (level > cxstack_ix) \
+   level = cxstack_ix;    \
+ } STMT_END
+
+#define SU_GET_CONTEXT(A, B) \
+ STMT_START {                \
+  if (items > A) {           \
+   SV *lsv = ST(B);          \
+   if (SvOK(lsv))            \
+    level = SvIV(lsv);       \
+   if (level < 0)            \
+    level = 0;               \
+   else if (level > cxix)    \
+    level = cxix;            \
+  }                          \
+ } STMT_END
 
 #define SU_DOPOPTOCX(t)                    \
  STMT_START {                              \
   I32 i, cxix = cxstack_ix, level = 0;     \
-  if (items) {                             \
-   SV *lsv = ST(0);                        \
-   if (SvOK(lsv))                          \
-    level = SvIV(lsv);                     \
-   if (level < 0)                          \
-    level = 0;                             \
-   else if (level > cxix)                  \
-    level = cxix;                          \
-  }                                        \
+  SU_GET_CONTEXT(0, 0);                    \
   for (i = cxix - level; i >= 0; --i) {    \
    if (CxTYPE(&cxstack[i]) == t) {         \
     ST(0) = sv_2mortal(newSViv(cxix - i)); \
@@ -605,19 +612,13 @@ XS(XS_Scope__Upper_unwind) {
 #else
  dXSARGS;
 #endif
- I32 level = 0, cxix = cxstack_ix;
+ I32 cxix = cxstack_ix, level = 0;
  su_ud_unwind *ud;
+
  PERL_UNUSED_VAR(cv); /* -W */
  PERL_UNUSED_VAR(ax); /* -Wall */
- if (items) {
-  SV *lsv = ST(items - 1);
-  if (SvOK(lsv))
-   level = SvIV(lsv);
-  if (level < 0)
-   level = 0;
-  else if (level > cxix)
-   level = cxix;
- }
+
+ SU_GET_CONTEXT(0, items - 1);
  cxix -= level;
  do {
   PERL_CONTEXT *cx = cxstack + cxix;
@@ -735,15 +736,7 @@ PROTOTYPE: ;$
 PREINIT:
  I32 cxix = cxstack_ix, level = 0;
 PPCODE:
- if (items) {
-  SV *lsv = ST(0);
-  if (SvOK(lsv))
-   level = SvIV(lsv);
-  if (level < 0)
-   level = 0;
-  else if (level > cxix)
-   level = cxix;
- }
+ SU_GET_CONTEXT(0, 0);
  cxix -= level;
  while (cxix > 0) {
   PERL_CONTEXT *cx = cxstack + cxix--;
