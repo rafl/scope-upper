@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 29;
+use Test::More tests => 33;
 
 use Scope::Upper qw/unwind SUB/;
 
@@ -243,3 +243,24 @@ is_deeply \@res, [ qw/d e f/ ], 'unwind in list context at sub across eval to li
  }
 }->(0);
 is_deeply \@res, [ qw/j k l/ ], 'unwind in list context at sub across loop iterator to list';
+
+# --- Prototypes --------------------------------------------------------------
+
+sub pie { 7, unwind qw/pie good/, $_[0] => SUB }
+
+sub wlist (@) { return @_ }
+
+$res = wlist pie 1;
+is $res, 3, 'unwind to list prototype to scalar';
+
+@res = wlist pie 2;
+is_deeply \@res, [ qw/pie good 2/ ], 'unwind to list prototype to list';
+
+sub wscalar ($$) { return @_ }
+
+$res = wscalar pie(6), pie(7);
+is $res, 2, 'unwind to scalar prototype to scalar';
+
+@res = wscalar pie(8), pie(9);
+is_deeply \@res, [ 8, 9 ], 'unwind to scalar prototype to list';
+
