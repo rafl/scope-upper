@@ -533,7 +533,8 @@ STATIC void su_unwind(pTHX_ void *ud_) {
   dounwind(cxix);
 
  /* Hide the level */
- PL_stack_sp--;
+ if (items >= 0)
+  PL_stack_sp--;
 
  mark = PL_markstack[cxstack[cxix].blk_oldmarksp];
 
@@ -597,20 +598,19 @@ XS(XS_Scope__Upper_unwind) {
 #else
  dXSARGS;
 #endif
- I32 cxix;
+ I32 from = 0, cxix = cxstack_ix;
  su_ud_unwind *ud;
  SV *level;
- if (!items)
-  Perl_croak(aTHX_ "Usage: Scope::Upper::unwind(..., level)");
  PERL_UNUSED_VAR(cv); /* -W */
  PERL_UNUSED_VAR(ax); /* -Wall */
- level = ST(items - 1);
- cxix = SvOK(level) ? SvIV(level) : 0;
- if (cxix < 0)
-  cxix = 0;
- else if (cxix > cxstack_ix)
-  cxix = cxstack_ix;
- cxix = cxstack_ix - cxix;
+ if (items) {
+  from = SvIV(ST(items - 1));
+  if (from < 0)
+   from = 0;
+  else if (from > cxix)
+   from = cxix;
+ }
+ cxix -= from;
  do {
   PERL_CONTEXT *cx = cxstack + cxix;
   switch (CxTYPE(cx)) {
