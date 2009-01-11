@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 16;
+use Test::More tests => 19;
 
 use Scope::Upper qw/want_at/;
 
@@ -39,6 +39,11 @@ my @a = sub {
    check want_at(1), 1, 'for : want_at(1)';
    check want_at(2), 1, 'for : want_at(2)';
   }
+  eval "
+   check want_at,    undef, 'eval string : want_at';
+   check want_at(1), 1,     'eval string : want_at(1)';
+   check want_at(2), 1,     'eval string : want_at(2)';
+  ";
   my $x = eval {
    do {
     check want_at,    0, 'do : want_at';
