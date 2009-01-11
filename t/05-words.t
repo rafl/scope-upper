@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 33;
+use Test::More tests => 46;
 
 use Scope::Upper qw/:words/;
 
@@ -74,3 +74,25 @@ do {
   }
  };
 } while (0);
+
+{
+ is CALLER,    1, '{ } : caller';
+ is CALLER(0), 1, '{ } : caller 0';
+ is CALLER(1), 1, '{ } : caller 1';
+ sub {
+  is CALLER,    0, '{ sub { } } : caller';
+  is CALLER(0), 0, '{ sub { } } : caller 0';
+  is CALLER(1), 2, '{ sub { } } : caller 1';
+  for (1) {
+   is CALLER,    1, '{ sub { for { } } } : caller';
+   is CALLER(0), 1, '{ sub { for { } } } : caller 0';
+   is CALLER(1), 3, '{ sub { for { } } } : caller 1';
+   eval {
+    is CALLER,    0, '{ sub { for { eval { } } } } : caller';
+    is CALLER(0), 0, '{ sub { for { eval { } } } } : caller 0';
+    is CALLER(1), 2, '{ sub { for { eval { } } } } : caller 1';
+    is CALLER(2), 4, '{ sub { for { eval { } } } } : caller 2';
+   }
+  }
+ }->();
+}

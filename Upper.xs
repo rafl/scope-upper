@@ -701,6 +701,35 @@ PPCODE:
  SU_DOPOPTOCX(CXt_EVAL);
 
 void
+CALLER(...)
+PROTOTYPE: ;$
+PREINIT:
+ I32 cxix = cxstack_ix, caller = 0, level = 0;
+PPCODE:
+ if (items) {
+  SV *csv = ST(0);
+  if (SvOK(csv))
+   caller = SvIV(csv);
+ }
+ cxix = cxstack_ix;
+ while (cxix > 0) {
+  PERL_CONTEXT *cx = cxstack + cxix--;
+  switch (CxTYPE(cx)) {
+   case CXt_SUB:
+   case CXt_EVAL:
+   case CXt_FORMAT:
+    --caller;
+    if (caller < 0)
+     goto done;
+    break;
+  }
+  ++level;
+ }
+done:
+ ST(0) = sv_2mortal(newSViv(level));
+ XSRETURN(1);
+
+void
 reap(SV *hook, ...)
 PROTOTYPE: &;$
 PREINIT:
