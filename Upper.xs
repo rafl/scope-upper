@@ -515,30 +515,7 @@ done:
  return depth;
 }
 
-#define SU_GET_LEVEL(A)  \
- if (items > A) {        \
-  SV *lsv = ST(A);       \
-  if (SvOK(lsv))         \
-   level = SvUV(lsv);    \
-  if (level < 0)         \
-   XSRETURN(0);          \
- }                       \
- if (level > cxstack_ix) \
-  level = cxstack_ix;
-
-#define SU_DOPOPTOCX(t)                    \
- STMT_START {                              \
-  I32 i, cxix = cxstack_ix, from = 0;      \
-  if (items)                               \
-   from = SvIV(ST(0));                     \
-  for (i = cxix - from; i >= 0; --i) {     \
-   if (CxTYPE(&cxstack[i]) == t) {         \
-    ST(0) = sv_2mortal(newSViv(cxix - i)); \
-    XSRETURN(1);                           \
-   }                                       \
-  }                                        \
-  XSRETURN_UNDEF;                          \
- } STMT_END
+/* --- Unwind stack -------------------------------------------------------- */
 
 typedef struct {
  I32 cxix;
@@ -579,6 +556,31 @@ STATIC void su_unwind(pTHX_ void *ud_) {
 }
 
 /* --- XS ------------------------------------------------------------------ */
+
+#define SU_GET_LEVEL(A)  \
+ if (items > A) {        \
+  SV *lsv = ST(A);       \
+  if (SvOK(lsv))         \
+   level = SvUV(lsv);    \
+  if (level < 0)         \
+   XSRETURN(0);          \
+ }                       \
+ if (level > cxstack_ix) \
+  level = cxstack_ix;
+
+#define SU_DOPOPTOCX(t)                    \
+ STMT_START {                              \
+  I32 i, cxix = cxstack_ix, from = 0;      \
+  if (items)                               \
+   from = SvIV(ST(0));                     \
+  for (i = cxix - from; i >= 0; --i) {     \
+   if (CxTYPE(&cxstack[i]) == t) {         \
+    ST(0) = sv_2mortal(newSViv(cxix - i)); \
+    XSRETURN(1);                           \
+   }                                       \
+  }                                        \
+  XSRETURN_UNDEF;                          \
+ } STMT_END
 
 XS(XS_Scope__Upper_unwind); /* prototype to pass -Wmissing-prototypes */
 
