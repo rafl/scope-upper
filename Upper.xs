@@ -14,6 +14,10 @@
 
 /* --- Compatibility ------------------------------------------------------- */
 
+#ifndef PERL_UNUSED_VAR
+# define PERL_UNUSED_VAR(V)
+#endif
+
 #ifndef STMT_START
 # define STMT_START do
 #endif
@@ -536,7 +540,88 @@ done:
   XSRETURN_UNDEF;                          \
  } STMT_END
 
+typedef struct {
+ I32 cxix;
+ I32 items;
+} su_ud_unwind;
+
+STATIC void su_unwind(pTHX_ void *ud_) {
+ su_ud_unwind *ud = (su_ud_unwind *) ud_;
+ OP fakeop;
+ I32 cxix  = ud->cxix;
+ I32 items = ud->items - 1;
+ I32 gimme, mark = 0;
+
+ if (cxstack_ix > cxix)
+  dounwind(cxix);
+
+ /* Hide the level */
+ PL_stack_sp--;
+
+ gimme = GIMME_V;
+ if (cxix > 0)
+  mark = cxstack[cxix - 1].blk_oldsp;
+
+ if (gimme == G_SCALAR) {
+  *PL_markstack_ptr = PL_stack_sp - PL_stack_base;
+  PL_stack_sp += items;
+ } else {
+  *PL_markstack_ptr = PL_stack_sp - PL_stack_base - items;
+ }
+
+ PL_op = PL_ppaddr[OP_RETURN](aTHX);
+ *PL_markstack_ptr = mark;
+
+ fakeop.op_next = PL_op;
+ PL_op = &fakeop;
+
+ Safefree(ud);
+}
+
 /* --- XS ------------------------------------------------------------------ */
+
+XS(XS_Scope__Upper_unwind); /* prototype to pass -Wmissing-prototypes */
+
+XS(XS_Scope__Upper_unwind) {
+#ifdef dVAR
+ dVAR; dXSARGS;
+#else
+ dXSARGS;
+#endif
+ I32 cxix;
+ su_ud_unwind *ud;
+ SV *level;
+ if (!items)
+  Perl_croak(aTHX_ "Usage: Scope::Upper::unwind(..., level)");
+ PERL_UNUSED_VAR(cv); /* -W */
+ PERL_UNUSED_VAR(ax); /* -Wall */
+ level = ST(items - 1);
+ cxix = SvOK(level) ? SvIV(level) : 0;
+ if (cxix < 0)
+  cxix = 0;
+ else if (cxix > cxstack_ix)
+  cxix = cxstack_ix;
+ cxix = cxstack_ix - cxix;
+ do {
+  PERL_CONTEXT *cx = cxstack + cxix;
+  switch (CxTYPE(cx)) {
+   case CXt_SUB:
+   case CXt_EVAL:
+   case CXt_FORMAT:
+    /* pp_entersub will try to sanitize the stack - screw that, we're insane */
+    if (GIMME_V == G_SCALAR)
+     PL_stack_sp = PL_stack_base + TOPMARK + 1;
+    Newx(ud, 1, su_ud_unwind);
+    ud->cxix  = cxix;
+    ud->items = items;
+    SAVEDESTRUCTOR_X(su_unwind, ud);
+    return;
+   default:
+    break;
+  }
+ } while (--cxix >= 0);
+ croak("Can't return outside a subroutine");
+}
 
 MODULE = Scope::Upper            PACKAGE = Scope::Upper
 
@@ -546,6 +631,7 @@ BOOT:
 {
  HV *stash = gv_stashpv(__PACKAGE__, 1);
  newCONSTSUB(stash, "HERE", newSViv(0));
+ newXSproto("Scope::Upper::unwind", XS_Scope__Upper_unwind, file, NULL);
 }
 
 SV *
