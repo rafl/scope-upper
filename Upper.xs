@@ -730,6 +730,40 @@ done:
  XSRETURN(1);
 
 void
+want_at(...)
+PROTOTYPE: ;$
+PREINIT:
+ I32 cxix = cxstack_ix, level = 0;
+PPCODE:
+ if (items) {
+  SV *lsv = ST(0);
+  if (SvOK(lsv))
+   level = SvIV(lsv);
+  if (level < 0)
+   level = 0;
+  else if (level > cxix)
+   level = cxix;
+ }
+ cxix -= level;
+ while (cxix > 0) {
+  PERL_CONTEXT *cx = cxstack + cxix--;
+  switch (CxTYPE(cx)) {
+   case CXt_SUB:
+   case CXt_EVAL:
+   case CXt_FORMAT: {
+    I32 gimme = cx->blk_gimme;
+    switch (gimme) {
+     case G_VOID:   XSRETURN_UNDEF; break;
+     case G_SCALAR: XSRETURN_NO;    break;
+     case G_ARRAY:  XSRETURN_YES;   break;
+    }
+    break;
+   }
+  }
+ }
+ XSRETURN_UNDEF;
+
+void
 reap(SV *hook, ...)
 PROTOTYPE: &;$
 PREINIT:

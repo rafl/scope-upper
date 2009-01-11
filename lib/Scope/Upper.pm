@@ -141,6 +141,10 @@ C<$key> is ignored.
 Returns C<@values> I<from> the context indicated by C<$level>, i.e. from the subroutine, eval or format just above C<$level>.
 The upper level isn't coerced onto C<@values>, which is hence always evaluated in list context.
 
+=head2 C<want_at $level>
+
+Like C<wantarray>, but for the subroutine/eval/format context just above C<$level>.
+
 =head1 WORDS
 
 =head2 C<TOP>
@@ -175,7 +179,7 @@ The level corresponding to the stack referenced by C<caller $stack>.
 
 =head1 EXPORT
 
-The functions L</reap>, L</localize>, L</localize_elem>, L</localize_delete> and L</unwind> are only exported on request, either individually or by the tags C<':funcs'> and C<':all'>.
+The functions L</reap>, L</localize>, L</localize_elem>, L</localize_delete>,  L</unwind> and L</want_at> are only exported on request, either individually or by the tags C<':funcs'> and C<':all'>.
 
 Same goes for the words L</TOP>, L</HERE>, L</UP>, L</DOWN>, L</SUB>, L</EVAL> and L</CALLER> that are only exported on request, individually or by the tags C<':words'> and C<':all'>.
 
@@ -185,7 +189,7 @@ use base qw/Exporter/;
 
 our @EXPORT      = ();
 our %EXPORT_TAGS = (
- funcs => [ qw/reap localize localize_elem localize_delete unwind/ ],
+ funcs => [ qw/reap localize localize_elem localize_delete unwind want_at/ ],
  words => [ qw/TOP HERE UP DOWN SUB EVAL CALLER/ ],
 );
 our @EXPORT_OK   = map { @$_ } values %EXPORT_TAGS;
