@@ -56,6 +56,26 @@ BEGIN {
      ...
     } # "pie: done" is printed
 
+    package Z;
+
+    use Scope::Upper qw/unwind want_at :words/;
+
+    sub try (&) {
+     my @result = shift->();
+     my $cx = SUB UP SUB;
+     unwind +(want_at($cx) ? @result : scalar @result) => $cx;
+    }
+
+    ...
+
+    sub zap {
+     try {
+      return @things; # returns to try() and then outside zap()
+     }
+    }
+
+    my @what = zap(); # @what contains @things
+
 =head1 DESCRIPTION
 
 This module lets you defer actions that will take place when the control flow returns into an upper scope.

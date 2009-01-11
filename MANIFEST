@@ -5,6 +5,7 @@ README
 Upper.xs
 lib/Scope/Upper.pm
 samples/tag.pl
+samples/try.pl
 t/00-load.t
 t/01-import.t
 t/05-words.t
