@@ -546,6 +546,14 @@ STATIC void su_unwind(pTHX_ void *ud_) {
   *PL_markstack_ptr = PL_stack_sp - PL_stack_base - items;
  }
 
+ SU_D({
+  PerlIO_printf(Perl_debug_log,
+                "%p: cx=%d gimme=%s items=%d sp=%d oldmark=%d mark=%d\n",
+                ud, cxix,
+                gimme == G_VOID ? "void" : gimme == G_ARRAY ? "list" : "scalar",
+                items, PL_stack_sp - PL_stack_base, *PL_markstack_ptr, mark);
+ });
+
  PL_op = PL_ppaddr[OP_RETURN](aTHX);
  *PL_markstack_ptr = mark;
 
