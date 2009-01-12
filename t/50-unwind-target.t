@@ -25,5 +25,5 @@ is_deeply \@res, [ 7 ], 'unwind(-1)';
  unwind 100;
  8;
 });
-like $@, qr/^Can't\s+return\s+outside\s+a\s+subroutine/, 'unwind(100)';
+like $@, qr/^Can't\s+return\s+outside\s+a\s+subroutine/, 'unwind(100) croaks';
 is_deeply \@res, [ 7 ], 'unwind(100)';
