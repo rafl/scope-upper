@@ -30,6 +30,7 @@ t/50-unwind-target.t
 t/53-unwind-context.t
 t/55-unwind-multi.t
 t/81-stress-level.t
+t/85-stress-unwind.t
 t/90-boilerplate.t
 t/91-pod.t
 t/92-pod-coverage.t
