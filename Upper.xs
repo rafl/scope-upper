@@ -66,6 +66,50 @@
 
 #define SU_HAS_PERL(R, V, S) (PERL_REVISION > (R) || (PERL_REVISION == (R) && (PERL_VERSION > (V) || (PERL_VERSION == (V) && (PERL_SUBVERSION >= (S))))))
 
+/* --- Threads and multiplicity -------------------------------------------- */
+
+#ifndef NOOP
+# define NOOP
+#endif
+
+#ifndef dNOOP
+# define dNOOP
+#endif
+
+#ifndef SU_MULTIPLICITY
+# if defined(MULTIPLICITY) || defined(PERL_IMPLICIT_CONTEXT)
+#  define SU_MULTIPLICITY 1
+# else
+#  define SU_MULTIPLICITY 0
+# endif
+#endif
+#if SU_MULTIPLICITY && !defined(tTHX)
+# define tTHX PerlInterpreter*
+#endif
+
+#if SU_MULTIPLICITY && defined(USE_ITHREADS) && defined(dMY_CXT) && defined(MY_CXT) && defined(START_MY_CXT) && defined(MY_CXT_INIT) && (defined(MY_CXT_CLONE) || defined(dMY_CXT_SV))
+# define SU_THREADSAFE 1
+# ifndef MY_CXT_CLONE
+#  define MY_CXT_CLONE \
+    dMY_CXT_SV;                                                      \
+    my_cxt_t *my_cxtp = (my_cxt_t*)SvPVX(newSV(sizeof(my_cxt_t)-1)); \
+    Copy(INT2PTR(my_cxt_t*, SvUV(my_cxt_sv)), my_cxtp, 1, my_cxt_t); \
+    sv_setuv(my_cxt_sv, PTR2UV(my_cxtp))
+# endif
+#else
+# define SU_THREADSAFE 0
+# undef  dMY_CXT
+# define dMY_CXT      dNOOP
+# undef  MY_CXT
+# define MY_CXT       su_globaldata
+# undef  START_MY_CXT
+# define START_MY_CXT STATIC my_cxt_t MY_CXT;
+# undef  MY_CXT_INIT
+# define MY_CXT_INIT  NOOP
+# undef  MY_CXT_CLONE
+# define MY_CXT_CLONE NOOP
+#endif
+
 /* --- Stack manipulations ------------------------------------------------- */
 
 #ifndef SvCANEXISTDELETE
@@ -515,23 +559,30 @@ done:
  return depth;
 }
 
-/* --- Unwind stack -------------------------------------------------------- */
+/* --- Global data --------------------------------------------------------- */
+
+#define MY_CXT_KEY __PACKAGE__ "::_guts" XS_VERSION
 
 typedef struct {
  I32 cxix;
  I32 items;
- SV **sp;
-} su_ud_unwind;
+ SV  **savesp;
+ OP  fakeop;
+} my_cxt_t;
+
+START_MY_CXT
+
+/* --- Unwind stack -------------------------------------------------------- */
 
 STATIC void su_unwind(pTHX_ void *ud_) {
- su_ud_unwind *ud = (su_ud_unwind *) ud_;
- OP fakeop;
- I32 cxix  = ud->cxix;
- I32 items = ud->items - 1;
+ dMY_CXT;
+ I32 cxix    = MY_CXT.cxix;
+ I32 items   = MY_CXT.items - 1;
+ SV **savesp = MY_CXT.savesp;
  I32 mark;
 
- if (ud->sp)
-  PL_stack_sp = ud->sp;
+ if (savesp)
+  PL_stack_sp = savesp;
 
  if (cxstack_ix > cxix)
   dounwind(cxix);
@@ -547,7 +598,7 @@ STATIC void su_unwind(pTHX_ void *ud_) {
   I32 gimme = GIMME_V;
   PerlIO_printf(Perl_debug_log,
                 "%p: cx=%d gimme=%s items=%d sp=%d oldmark=%d mark=%d\n",
-                ud, cxix,
+                &MY_CXT, cxix,
                 gimme == G_VOID ? "void" : gimme == G_ARRAY ? "list" : "scalar",
                 items, PL_stack_sp - PL_stack_base, *PL_markstack_ptr, mark);
  });
@@ -555,10 +606,8 @@ STATIC void su_unwind(pTHX_ void *ud_) {
  PL_op = PL_ppaddr[OP_RETURN](aTHX);
  *PL_markstack_ptr = mark;
 
- fakeop.op_next = PL_op;
- PL_op = &fakeop;
-
- Safefree(ud);
+ MY_CXT.fakeop.op_next = PL_op;
+ PL_op = &(MY_CXT.fakeop);
 }
 
 /* --- XS ------------------------------------------------------------------ */
@@ -610,8 +659,8 @@ XS(XS_Scope__Upper_unwind) {
 #else
  dXSARGS;
 #endif
+ dMY_CXT;
  I32 cxix = cxstack_ix, level = 0;
- su_ud_unwind *ud;
 
  PERL_UNUSED_VAR(cv); /* -W */
  PERL_UNUSED_VAR(ax); /* -Wall */
@@ -624,19 +673,18 @@ XS(XS_Scope__Upper_unwind) {
    case CXt_SUB:
    case CXt_EVAL:
    case CXt_FORMAT:
-    Newx(ud, 1, su_ud_unwind);
-    ud->cxix  = cxix;
-    ud->items = items;
+    MY_CXT.cxix  = cxix;
+    MY_CXT.items = items;
     /* pp_entersub will want to sanitize the stack after returning from there
      * Screw that, we're insane */
     if (GIMME_V == G_SCALAR) {
-     ud->sp = PL_stack_sp;
+     MY_CXT.savesp = PL_stack_sp;
      /* dXSARGS calls POPMARK, so we need to match PL_markstack_ptr[1] */
      PL_stack_sp = PL_stack_base + PL_markstack_ptr[1] + 1;
     } else {
-     ud->sp = NULL;
+     MY_CXT.savesp = NULL;
     }
-    SAVEDESTRUCTOR_X(su_unwind, ud);
+    SAVEDESTRUCTOR_X(su_unwind, NULL);
     return;
    default:
     break;
@@ -651,10 +699,20 @@ PROTOTYPES: ENABLE
 
 BOOT:
 {
- HV *stash = gv_stashpv(__PACKAGE__, 1);
+ HV *stash;
+ MY_CXT_INIT;
+ stash = gv_stashpv(__PACKAGE__, 1);
  newCONSTSUB(stash, "HERE", newSViv(0));
  newXSproto("Scope::Upper::unwind", XS_Scope__Upper_unwind, file, NULL);
 }
+
+void
+CLONE(...)
+PROTOTYPE: DISABLE
+CODE:
+#if SU_THREADSAFE
+ MY_CXT_CLONE;
+#endif /* SU_THREADSAFE */
 
 SV *
 TOP()
