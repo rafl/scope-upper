@@ -2,7 +2,7 @@ NAME
     Scope::Upper - Act on upper scopes.
 
 VERSION
-    Version 0.04
+    Version 0.05
 
 SYNOPSIS
         package X;
@@ -65,7 +65,8 @@ DESCRIPTION
     This module lets you defer actions that will take place when the control
     flow returns into an upper scope. Currently, you can hook an upper scope
     end, or localize variables, array/hash values or deletions of elements
-    in higher contexts.
+    in higher contexts. You can also return to an upper level and know which
+    context was in use then.
 
 FUNCTIONS
   "reap $callback, $level"
@@ -124,12 +125,30 @@ FUNCTIONS
 
   "unwind @values, $level"
     Returns @values *from* the context indicated by $level, i.e. from the
-    subroutine, eval or format just above $level. The upper level isn't
-    coerced onto @values, which is hence always evaluated in list context.
+    subroutine, eval or format just above $level.
+
+    The upper level isn't coerced onto @values, which is hence always
+    evaluated in list context. This means that
+
+        my $num = sub {
+         my @a = ('a' .. 'z');
+         unwind @a => 0;
+        }->();
+
+    will set $num to 'z'. You can use "want_at" to handle these cases.
 
   "want_at $level"
     Like "wantarray", but for the subroutine/eval/format context just above
     $level.
+
+    The previous example can then be "corrected" :
+
+        my $num = sub {
+         my @a = ('a' .. 'z');
+         unwind +(want_at(0) ? @a : scalar @a) => 0;
+        }->();
+
+    will righteously set $num to 26.
 
 WORDS
   "TOP"
@@ -154,7 +173,14 @@ WORDS
     as the reference level.
 
   "CALLER $stack"
-    The level corresponding to the stack referenced by "caller $stack".
+    The level of the $stack-th upper subroutine/eval/format context. It kind
+    of corresponds to the context represented by "caller $stack", but while
+    e.g. "caller 0" refers to the caller context, "CALLER 0" will refer to
+    the top scope in the current context. For example,
+
+        reap ... => CALLER(0)
+
+    will fire the destructor when the current subroutine/eval/format ends.
 
 EXPORT
     The functions "reap", "localize", "localize_elem", "localize_delete",

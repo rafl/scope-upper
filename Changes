@@ -1,5 +1,12 @@
 Revision history for Scope-Upper
 
+0.05    2009-01-12 18:15 UTC
+        + Fix : Stack mess when using unwind() in scalar context.
+        + Fix : Returning an automatic variable isn't wise, so let's use a
+                context instead.
+        + Doc : Clarifications.
+        + Tst : Stress tests for unwind().
+
 0.04    2009-01-11 18:40 UTC
         + Add : unwind(@things, $level), that returns to an upper context.
         + Add : want_at($level), that gives the wantarray for $level.
