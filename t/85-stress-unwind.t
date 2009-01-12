@@ -59,21 +59,30 @@ sub gen {
  return \@res;
 }
 
+sub linearize { join ', ', map { defined($_) ? $_ : '(undef)' } @_ }
+
 sub runtests {
+ my ($height, $level) = @_;
+ my $i;
  my $tests = gen @_;
  for (@$tests) {
+  ++$i;
   no warnings 'void';
-  my @res = eval $_->[0];
-  my @exp = eval $_->[1] unless $@;
-  if ($@ || !is_deeply \@res, \@exp) {
-   diag "=== vvv Test vvv ===";
-   diag $_->[0];
-   diag "------- Got --------";
-   diag join(', ', map { defined($_) ? $_ : '(undef)' } @res);
-   diag "----- Expected -----";
-   diag join(', ', map { defined($_) ? $_ : '(undef)' } @exp);
-   diag "=== ^^^^^^^^^^^^ ===";
+  my $res = linearize eval $_->[0];
+  $res = '*TEST DID NOT COMPILE*' if $@;
+  my $exp;
+  unless ($@) {
+   $exp = linearize eval $_->[1];
+   $exp = '*REFERENCE DID NOT COMPILE*' if $@;
   }
+  if ($@ || $res ne $exp) {
+   diag <<DIAG;
+=== This testcase failed ===
+$_->[0];
+==== vvvvv Errors vvvvvv ===
+DIAG
+  }
+  is $res, $exp, "stress unwind $height $level $i";
  }
 }
 
