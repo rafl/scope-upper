@@ -520,6 +520,7 @@ done:
 typedef struct {
  I32 cxix;
  I32 items;
+ SV **sp;
 } su_ud_unwind;
 
 STATIC void su_unwind(pTHX_ void *ud_) {
@@ -527,9 +528,10 @@ STATIC void su_unwind(pTHX_ void *ud_) {
  OP fakeop;
  I32 cxix  = ud->cxix;
  I32 items = ud->items - 1;
- I32 gimme, mark;
+ I32 mark;
 
- gimme = GIMME_V;
+ if (ud->sp)
+  PL_stack_sp = ud->sp;
 
  if (cxstack_ix > cxix)
   dounwind(cxix);
@@ -539,15 +541,10 @@ STATIC void su_unwind(pTHX_ void *ud_) {
   PL_stack_sp--;
 
  mark = PL_markstack[cxstack[cxix].blk_oldmarksp];
-
- if (gimme == G_SCALAR) {
-  *PL_markstack_ptr = PL_stack_sp - PL_stack_base;
-  PL_stack_sp += items;
- } else {
-  *PL_markstack_ptr = PL_stack_sp - PL_stack_base - items;
- }
+ *PL_markstack_ptr = PL_stack_sp - PL_stack_base - items;
 
  SU_D({
+  I32 gimme = GIMME_V;
   PerlIO_printf(Perl_debug_log,
                 "%p: cx=%d gimme=%s items=%d sp=%d oldmark=%d mark=%d\n",
                 ud, cxix,
@@ -627,12 +624,18 @@ XS(XS_Scope__Upper_unwind) {
    case CXt_SUB:
    case CXt_EVAL:
    case CXt_FORMAT:
-    /* pp_entersub will try to sanitize the stack - screw that, we're insane */
-    if (GIMME_V == G_SCALAR)
-     PL_stack_sp = PL_stack_base + TOPMARK + 1;
     Newx(ud, 1, su_ud_unwind);
     ud->cxix  = cxix;
     ud->items = items;
+    /* pp_entersub will want to sanitize the stack after returning from there
+     * Screw that, we're insane */
+    if (GIMME_V == G_SCALAR) {
+     ud->sp = PL_stack_sp;
+     /* dXSARGS calls POPMARK, so we need to match PL_markstack_ptr[1] */
+     PL_stack_sp = PL_stack_base + PL_markstack_ptr[1] + 1;
+    } else {
+     ud->sp = NULL;
+    }
     SAVEDESTRUCTOR_X(su_unwind, ud);
     return;
    default:
