@@ -80,6 +80,7 @@ BEGIN {
 
 This module lets you defer actions that will take place when the control flow returns into an upper scope.
 Currently, you can hook an upper scope end, or localize variables, array/hash values or deletions of elements in higher contexts.
+You can also return to an upper level and know which context was in use then.
 
 =head1 FUNCTIONS
 
@@ -159,11 +160,30 @@ C<$key> is ignored.
 =head2 C<unwind @values, $level>
 
 Returns C<@values> I<from> the context indicated by C<$level>, i.e. from the subroutine, eval or format just above C<$level>.
+
 The upper level isn't coerced onto C<@values>, which is hence always evaluated in list context.
+This means that
+
+    my $num = sub {
+     my @a = ('a' .. 'z');
+     unwind @a => 0;
+    }->();
+
+will set C<$num> to C<'z'>.
+You can use L</want_at> to handle these cases.
 
 =head2 C<want_at $level>
 
 Like C<wantarray>, but for the subroutine/eval/format context just above C<$level>.
+
+The previous example can then be "corrected" :
+
+    my $num = sub {
+     my @a = ('a' .. 'z');
+     unwind +(want_at(0) ? @a : scalar @a) => 0;
+    }->();
+
+will righteously set C<$num> to C<26>.
 
 =head1 WORDS
 
@@ -195,7 +215,13 @@ If C<$from> is omitted in any of those functions, the current level is used as t
 
 =head2 C<CALLER $stack>
 
-The level corresponding to the stack referenced by C<caller $stack>.
+The level of the C<$stack>-th upper subroutine/eval/format context.
+It kind of corresponds to the context represented by C<caller $stack>, but while e.g. C<caller 0> refers to the caller context, C<CALLER 0> will refer to the top scope in the current context.
+For example,
+
+    reap ... => CALLER(0)
+
+will fire the destructor when the current subroutine/eval/format ends.
 
 =head1 EXPORT
 
