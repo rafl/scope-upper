@@ -5,7 +5,7 @@ use warnings;
 
 use Test::More 'no_plan'; 
 
-use Scope::Upper qw/localize_elem/;
+use Scope::Upper qw/localize_elem UP HERE/;
 
 use lib 't/lib';
 use Scope::Upper::TestGenerator;
@@ -18,6 +18,7 @@ our $testcase;
 
 local $Scope::Upper::TestGenerator::call = sub {
  my ($height, $level, $i) = @_;
+ $level = $level ? 'UP ' x $level : 'HERE';
  return [ "localize_elem '\@a', 1 => 0 => $level;\n" ];
 };
 
@@ -47,6 +48,7 @@ for my $level (0 .. 1) {
 
 local $Scope::Upper::TestGenerator::call = sub {
  my ($height, $level, $i) = @_;
+ $level = $level ? 'UP ' x $level : 'HERE';
  return [ "localize_elem '%h', 'a' => 0 => $level;\n" ];
 };
 

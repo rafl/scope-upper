@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Scope::Upper qw/localize_elem/;
+use Scope::Upper qw/localize_elem UP HERE/;
 
 use Test::More tests => 8;
 
@@ -24,10 +24,10 @@ tie @a, 'Scope::Upper::Test::TiedArray';
 {
  local @a = (5 .. 7);
  {
-  localize_elem '@a', 4 => 12 => 0;
-  is_deeply \@a, [ 5 .. 7, undef, 12 ], 'localize_elem @incomplete_tied_array, $nonexistent, 12 => 0 [ok]';
+  localize_elem '@a', 4 => 12 => HERE;
+  is_deeply \@a, [ 5 .. 7, undef, 12 ], 'localize_elem @incomplete_tied_array, $nonexistent, 12 => HERE [ok]';
  }
- is_deeply \@a, [ 5 .. 7, undef, undef ], 'localize_elem @incomplete_tied_array, $nonexistent, 12 => 0 [end]';
+ is_deeply \@a, [ 5 .. 7, undef, undef ], 'localize_elem @incomplete_tied_array, $nonexistent, 12 => HERE [end]';
 }
 
 our $x;
@@ -37,7 +37,7 @@ our $x;
  local $SIG{__WARN__} = sub { };
  {
   {
-   localize_elem '%SIG', '__WARN__' => sub { $x = join '', @_ }, 1;
+   localize_elem '%SIG', '__WARN__' => sub { $x = join '', @_ } => UP;
    is $x, undef, 'localize_elem $SIG{__WARN__} [not yet]';
   }
   warn "1\n";
@@ -67,7 +67,7 @@ my $time = time;
  local $ENV{SCOPE_UPPER_TEST};
  {
   {
-   localize_elem '%ENV', 'SCOPE_UPPER_TEST' => $time, 1;
+   localize_elem '%ENV', 'SCOPE_UPPER_TEST' => $time => UP;
    runperl $time, 0, 'localize_elem $ENV{SCOPE_UPPER_TEST} [not yet]';
   }
   runperl $time, 1, 'localize_elem $ENV{SCOPE_UPPER_TEST} [ok]';

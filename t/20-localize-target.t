@@ -5,7 +5,7 @@ use warnings;
 
 use Test::More tests => 50;
 
-use Scope::Upper qw/localize/;
+use Scope::Upper qw/localize UP HERE/;
 
 # Scalars
 
@@ -14,10 +14,10 @@ our $x;
 {
  local $x = 2;
  {
-  localize *x, \1, 0;
-  is $x, 1, 'localize *x, \1, 0 [ok]';
+  localize *x, \1 => HERE;
+  is $x, 1, 'localize *x, \1 => HERE [ok]';
  }
- is $x, 2, 'localize *x, \1, 0 [end]';
+ is $x, 2, 'localize *x, \1 => HERE [end]';
 }
 
 sub _t { shift->{t} }
@@ -25,40 +25,40 @@ sub _t { shift->{t} }
 {
  local $x;
  {
-  localize *x, \bless({ t => 1 }, 'main'), 0;
-  is ref($x), 'main', 'localize *x, obj, 0 [ref]';
-  is $x->_t, 1, 'localize *x, obj, 0 [meth]';
+  localize *x, \bless({ t => 1 }, 'main') => HERE;
+  is ref($x), 'main', 'localize *x, obj => HERE [ref]';
+  is $x->_t, 1, 'localize *x, obj => HERE [meth]';
  }
- is $x, undef, 'localize *x, obj, 0 [end]';
+ is $x, undef, 'localize *x, obj => HERE [end]';
 }
 
 {
  local $x = 2;
  {
   local $x = 3;
-  localize *x, 1, 0;
-  is $x, undef, 'localize *x, 1, 0 [ok]';
+  localize *x, 1 => HERE;
+  is $x, undef, 'localize *x, 1 => HERE [ok]';
  }
- is $x, $] < 5.008009 ? undef : 2, 'localize *x, 1, 0 [end]';
+ is $x, $] < 5.008009 ? undef : 2, 'localize *x, 1 => HERE [end]';
 }
 undef *x;
 
 {
  local $x = 7;
  {
-  localize '$x', 2, 0;
-  is $x, 2, 'localize "$x", 2, 0 [ok]';
+  localize '$x', 2 => HERE;
+  is $x, 2, 'localize "$x", 2 => HERE [ok]';
  }
- is $x, 7, 'localize "$x", 2, 0 [end]';
+ is $x, 7, 'localize "$x", 2 => HERE [end]';
 }
 
 {
  local $x = 8;
  {
-  localize ' $x', 3, 0;
-  is $x, 3, 'localize " $x", 3, 0 [ok]';
+  localize ' $x', 3 => HERE;
+  is $x, 3, 'localize " $x", 3 => HERE [ok]';
  }
- is $x, 8, 'localize " $x", 3, 0 [end]';
+ is $x, 8, 'localize " $x", 3 => HERE [end]';
 }
 
 SKIP:
@@ -68,10 +68,10 @@ SKIP:
   no strict 'refs';
   local ${''} = 9;
   {
-   localize '$', 4, 0;
-   is ${''}, 4, 'localize "$", 4, 0 [ok]';
+   localize '$', 4 => HERE;
+   is ${''}, 4, 'localize "$", 4 => HERE [ok]';
   }
-  is ${''}, 9, 'localize "$", 4, 0 [end]';
+  is ${''}, 9, 'localize "$", 4 => HERE [end]';
  };
 }
 
@@ -82,39 +82,39 @@ SKIP:
   no strict 'refs';
   local ${''} = 10;
   {
-   localize '', 5, 0;
-   is ${''}, 5, 'localize "", 4, 0 [ok]';
+   localize '', 5 => HERE;
+   is ${''}, 5, 'localize "", 4 => HERE [ok]';
   }
-  is ${''}, 10, 'localize "", 4, 0 [end]';
+  is ${''}, 10, 'localize "", 4 => HERE [end]';
  };
 }
 
 {
  local $x = 2;
  {
-  localize 'x', \1, 0;
-  is $x, 1, 'localize "x", \1, 0 [ok]';
+  localize 'x', \1 => HERE;
+  is $x, 1, 'localize "x", \1 => HERE [ok]';
  }
- is $x, 2, 'localize "x", \1, 0 [end]';
+ is $x, 2, 'localize "x", \1 => HERE [end]';
 }
 
 {
  local $x = 4;
  {
-  localize 'x', 3, 0;
-  is $x, 3, 'localize "x", 3, 0 [ok]';
+  localize 'x', 3 => HERE;
+  is $x, 3, 'localize "x", 3 => HERE [ok]';
  }
- is $x, 4, 'localize "x", 3, 0 [end]';
+ is $x, 4, 'localize "x", 3 => HERE [end]';
 }
 
 {
  local $x;
  {
-  localize 'x', bless({ t => 2 }, 'main'), 0;
-  is ref($x), 'main', 'localize "x", obj, 0 [ref]';
-  is $x->_t, 2, 'localize "x", obj, 0 [meth]';
+  localize 'x', bless({ t => 2 }, 'main') => HERE;
+  is ref($x), 'main', 'localize "x", obj => HERE [ref]';
+  is $x->_t, 2, 'localize "x", obj => HERE [meth]';
  }
- is $x, undef, 'localize "x", obj, 0 [end]';
+ is $x, undef, 'localize "x", obj => HERE [end]';
 }
 
 sub callthrough (*$) {
@@ -124,7 +124,7 @@ sub callthrough (*$) {
   $val  = eval "\\$val";
  }
  local $x = 'x';
- localize $what, $val, 1;
+ localize $what, $val => UP;
  is $x, 'x', 'localize callthrough [not yet]';
 }
 
@@ -186,10 +186,10 @@ my $xa = [ 7 .. 9 ];
 {
  local @a = (4 .. 6);
  {
-  localize *a, $xa, 0;
-  is_deeply \@a, $xa, 'localize *a, [ ], 0 [ok]';
+  localize *a, $xa => HERE;
+  is_deeply \@a, $xa, 'localize *a, [ ] => HERE [ok]';
  }
- is_deeply \@a, [ 4 .. 6 ], 'localize *a, [ ], 0 [end]';
+ is_deeply \@a, [ 4 .. 6 ], 'localize *a, [ ] => HERE [end]';
 }
 
 {
@@ -197,12 +197,12 @@ my $xa = [ 7 .. 9 ];
  {
   local @a = (5 .. 7);
   {
-   localize *a, $xa, 1;
-   is_deeply \@a, [ 5 .. 7 ], 'localize *a, [ ], 1 [not yet]';
+   localize *a, $xa => UP;
+   is_deeply \@a, [ 5 .. 7 ], 'localize *a, [ ] => UP [not yet]';
   }
-  is_deeply \@a, $xa, 'localize *a, [ ], 1 [ok]';
+  is_deeply \@a, $xa, 'localize *a, [ ] => UP [ok]';
  }
- is_deeply \@a, [ 4 .. 6 ], 'localize *a, [ ], 1 [end]';
+ is_deeply \@a, [ 4 .. 6 ], 'localize *a, [ ] => UP [end]';
 }
 
 # Hashes
@@ -213,10 +213,10 @@ my $xh = { a => 5, c => 7 };
 {
  local %h = (a => 1, b => 2);
  {
-  localize *h, $xh, 0;
-  is_deeply \%h, $xh, 'localize *h, { }, 0 [ok]';
+  localize *h, $xh => HERE;
+  is_deeply \%h, $xh, 'localize *h, { } => HERE [ok]';
  }
- is_deeply \%h, { a => 1, b => 2 }, 'localize *h, { }, 0 [end]';
+ is_deeply \%h, { a => 1, b => 2 }, 'localize *h, { } => HERE [end]';
 }
 
 {
@@ -224,12 +224,12 @@ my $xh = { a => 5, c => 7 };
  {
   local %h = (b => 3, c => 4);
   {
-   localize *h, $xh, 1;
-   is_deeply \%h, { b => 3, c => 4 }, 'localize *h, { }, 1 [not yet]';
+   localize *h, $xh => UP;
+   is_deeply \%h, { b => 3, c => 4 }, 'localize *h, { } => UP [not yet]';
   }
-  is_deeply \%h, $xh, 'localize *h, { }, 1 [ok]';
+  is_deeply \%h, $xh, 'localize *h, { } => UP [ok]';
  }
- is_deeply \%h, { a => 1, b => 2 }, 'localize *h, { }, 1 [end]';
+ is_deeply \%h, { a => 1, b => 2 }, 'localize *h, { } => UP [end]';
 }
 
 # Code
@@ -237,17 +237,17 @@ my $xh = { a => 5, c => 7 };
 {
  local *foo = sub { 7 };
  {
-  localize *foo, sub { 6 }, 1;
-  is foo(), 7, 'localize *foo, sub { 6 }, 1 [not yet]';
+  localize *foo, sub { 6 } => UP;
+  is foo(), 7, 'localize *foo, sub { 6 } => UP [not yet]';
  }
- is foo(), 6, 'localize *foo, sub { 6 }, 1 [ok]';
+ is foo(), 6, 'localize *foo, sub { 6 } => UP [ok]';
 }
 
 {
  local *foo = sub { 9 };
  {
-  localize '&foo', sub { 8 }, 1;
-  is foo(), 9, 'localize "&foo", sub { 8 }, 1 [not yet]';
+  localize '&foo', sub { 8 } => UP;
+  is foo(), 9, 'localize "&foo", sub { 8 } => UP [not yet]';
  }
- is foo(), 8, 'localize "&foo", sub { 8 }, 1 [ok]';
+ is foo(), 8, 'localize "&foo", sub { 8 } => UP [ok]';
 }

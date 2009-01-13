@@ -5,7 +5,7 @@ use warnings;
 
 use Test::More 'no_plan';
 
-use Scope::Upper qw/localize_delete/;
+use Scope::Upper qw/localize_delete UP HERE/;
 
 use lib 't/lib';
 use Scope::Upper::TestGenerator;
@@ -14,6 +14,7 @@ our ($x, $testcase);
 
 local $Scope::Upper::TestGenerator::call = sub {
  my ($height, $level, $i) = @_;
+ $level = $level ? 'UP ' x $level : 'HERE';
  return [ "localize_delete '\@main::a', 2 => $level;\n" ];
 };
 
@@ -41,6 +42,7 @@ for my $level (0 .. 2) {
 
 local $Scope::Upper::TestGenerator::call = sub {
  my ($height, $level, $i) = @_;
+ $level = $level ? 'UP ' x $level : 'HERE';
  return [ "localize_delete '%main::h', 'a' => $level;\n" ];
 };
 

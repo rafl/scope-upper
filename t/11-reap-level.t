@@ -5,13 +5,14 @@ use warnings;
 
 use Test::More 'no_plan'; 
 
-use Scope::Upper qw/reap/;
+use Scope::Upper qw/reap UP HERE/;
 
 use lib 't/lib';
 use Scope::Upper::TestGenerator;
 
 local $Scope::Upper::TestGenerator::call = sub {
  my ($height, $level, $i) = @_;
+ $level = $level ? 'UP ' x $level : 'HERE';
  return [ "reap \\&check => $level;\n" ];
 };
 

@@ -5,13 +5,14 @@ use warnings;
 
 use Test::More 'no_plan'; 
 
-use Scope::Upper qw/localize/;
+use Scope::Upper qw/localize UP HERE/;
 
 use lib 't/lib';
 use Scope::Upper::TestGenerator;
 
 local $Scope::Upper::TestGenerator::call = sub {
  my ($height, $level, $i) = @_;
+ $level = $level ? 'UP ' x $level : 'HERE';
  return [ "localize '\$x' => 0 => $level;\n" ];
 };
 

@@ -5,7 +5,7 @@ use warnings;
 
 use Test::More tests => 44;
 
-use Scope::Upper qw/localize/;
+use Scope::Upper qw/localize UP HERE/;
 
 our ($x, $y);
 
@@ -13,7 +13,7 @@ our ($x, $y);
  local $x = 1;
  {
   local $x = 2;
-  localize '$y' => 1 => 0;
+  localize '$y' => 1 => HERE;
   is $x, 2, 'last 0 [ok - x]';
   is $y, 1, 'last 0 [ok - y]';
   last;
@@ -31,7 +31,7 @@ LOOP:
   local $y = 0;
   {
    local $x = 3;
-   localize '$y' => 1 => 1;
+   localize '$y' => 1 => UP;
    is $x, 3, 'last 1 [ok - x]';
    is $y, 0, 'last 1 [ok - y]';
    last LOOP;
@@ -47,7 +47,7 @@ LOOP:
  local $x = 1;
  {
   local $x = 2;
-  localize '$y' => 1 => 0;
+  localize '$y' => 1 => HERE;
   is $x, 2, 'next 0 [ok - x]';
   is $y, 1, 'next 0 [ok - y]';
   next;
@@ -65,7 +65,7 @@ LOOP:
   local $y = 0;
   {
    local $x = 3;
-   localize '$y' => 1 => 1;
+   localize '$y' => 1 => UP;
    is $x, 3, 'next 1 [ok - x]';
    is $y, 0, 'next 1 [ok - y]';
    next LOOP;
@@ -82,7 +82,7 @@ LOOP:
  {
   local $x = 2;
   {
-   localize '$y' => 1 => 2;
+   localize '$y' => 1 => UP UP;
   }
   is $x, 2,     'goto 1 [not yet - x]';
   is $y, undef, 'goto 1 [not yet - y]';
@@ -105,7 +105,7 @@ $y = undef;
   {
    local $x = 3;
    {
-    localize '$y' => 1 => 3;
+    localize '$y' => 1 => UP UP UP;
    }
    is $x, 3,     'goto 2 [not yet - x]';
    is $y, undef, 'goto 2 [not yet - y]';
@@ -130,7 +130,7 @@ $y = undef;
    {
     {
      local $x = 3;
-     localize '$y' => 1 => 4;
+     localize '$y' => 1 => UP UP UP UP;
      is $x, 3,     'die - reap outside eval [not yet 1 - x]';
      is $y, undef, 'die - reap outside eval [not yet 1 - y]';
     }
@@ -154,7 +154,7 @@ $y = undef;
   {
    {
     local $x = 3;
-    localize '$y' => 1 => 3;
+    localize '$y' => 1 => UP UP UP;
     is $x, 3,     'die - reap at eval [not yet 1 - x]';
     is $y, undef, 'die - reap at eval [not yet 1 - y]';
    }
@@ -175,7 +175,7 @@ $y = undef;
   {
    {
     local $x = 3;
-    localize '$y' => 1 => 2;
+    localize '$y' => 1 => UP UP;
     is $x, 3,     'die - reap inside eval [not yet 1 - x]';
     is $y, undef, 'die - reap inside eval [not yet 1 - y]';
    }

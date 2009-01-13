@@ -22,7 +22,7 @@ is_deeply \@res, [ 7 ], 'unwind()';
 is_deeply \@res, [ 7 ], 'unwind(-1)';
 
 @res = (7, eval {
- unwind 100;
+ unwind 0;
  8;
 });
 like $@, qr/^Can't\s+return\s+outside\s+a\s+subroutine/, 'unwind(100) croaks';

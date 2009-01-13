@@ -5,12 +5,13 @@ use warnings;
 
 use Test::More 'no_plan';
 
-use Scope::Upper qw/unwind/;
+use Scope::Upper qw/unwind UP HERE/;
 
 our ($call, @args, $args);
 
 $call = sub {
  my ($height, $level, $i) = @_;
+ $level = $level ? 'UP ' x $level : 'HERE';
  return [ [ "unwind(\@args => $level)\n", '' ] ];
 };
 

@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Scope::Upper qw/localize_delete/;
+use Scope::Upper qw/localize_delete UP HERE/;
 
 use Test::More tests => 9;
 
@@ -29,24 +29,24 @@ tie @a, 'Scope::Upper::Test::TiedArray';
 {
  local @a = (5 .. 7);
  local $a[4] = 9;
- is $deleted, undef, 'localize_delete @tied_array, $existent => 0 [not deleted]';
+ is $deleted, undef, 'localize_delete @tied_array, $existent => HERE [not deleted]';
  {
-  localize_delete '@a', 4 => 0;
-  is $deleted, 1, 'localize_delete @tied_array, $existent => 0 [deleted]';
-  is_deeply \@a, [ 5 .. 7 ], 'localize_delete @tied_array, $existent => 0 [ok]';
+  localize_delete '@a', 4 => HERE;
+  is $deleted, 1, 'localize_delete @tied_array, $existent => HERE [deleted]';
+  is_deeply \@a, [ 5 .. 7 ], 'localize_delete @tied_array, $existent => HERE [ok]';
  }
- is_deeply \@a, [ 5 .. 7, undef, 9 ], 'localize_elem @incomplete_tied_array, $nonexistent, 12 => 0 [end]';
- is $deleted, 1, 'localize_delete @tied_array, $existent => 0 [not more deleted]';
+ is_deeply \@a, [ 5 .. 7, undef, 9 ], 'localize_elem @incomplete_tied_array, $nonexistent, 12 => HERE [end]';
+ is $deleted, 1, 'localize_delete @tied_array, $existent => HERE [not more deleted]';
 }
 
 {
  local @a = (4 .. 6);
  local $a[4] = 7;
  {
-  localize_delete '@main::a', -1, 0;
-  is_deeply \@a, [ 4 .. 6 ], 'localize_delete @tied_array, $existent_neg => 0 [ok]';
+  localize_delete '@main::a', -1 => HERE;
+  is_deeply \@a, [ 4 .. 6 ], 'localize_delete @tied_array, $existent_neg => HERE [ok]';
  }
- is_deeply \@a, [ 4 .. 6, undef, 7 ], 'localize_delete @tied_array, $existent_neg => 0 [end]';
+ is_deeply \@a, [ 4 .. 6, undef, 7 ], 'localize_delete @tied_array, $existent_neg => HERE [end]';
 }
 
 SKIP:
@@ -56,8 +56,8 @@ SKIP:
  local @a = (4 .. 6);
  local $a[4] = 7;
  {
-  localize_delete '@main::a', -1, 0;
-  is_deeply \@a, [ 4 .. 6 ], 'localize_delete @tied_array_wo_neg, $existent_neg => 0 [ok]';
+  localize_delete '@main::a', -1 => HERE;
+  is_deeply \@a, [ 4 .. 6 ], 'localize_delete @tied_array_wo_neg, $existent_neg => HERE [ok]';
  }
- is_deeply \@a, [ 4, 5, 7 ], 'localize_delete @tied_array_wo_neg, $existent_neg => 0 [end]';
+ is_deeply \@a, [ 4, 5, 7 ], 'localize_delete @tied_array_wo_neg, $existent_neg => HERE [end]';
 }

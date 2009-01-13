@@ -22,7 +22,7 @@ BEGIN {
 
     package X;
 
-    use Scope::Upper qw/reap localize localize_elem localize_delete/;
+    use Scope::Upper qw/reap localize localize_elem localize_delete UP/;
 
     sub desc { shift->{desc} }
 
@@ -30,21 +30,21 @@ BEGIN {
      my ($desc) = @_;
 
      # First localize $x so that it gets destroyed last
-     localize '$x' => bless({ desc => $desc }, __PACKAGE__) => 1;
+     localize '$x' => bless({ desc => $desc }, __PACKAGE__) => UP;
 
      reap sub {
       my $pkg = caller;
       my $x = do { no strict 'refs'; ${$pkg.'::x'} }; # Get the $x in the scope
       print $x->desc . ": done\n";
-     } => 1;
+     } => UP;
 
      localize_elem '%SIG', '__WARN__' => sub {
       my $pkg = caller;
       my $x = do { no strict 'refs'; ${$pkg.'::x'} }; # Get the $x in the scope
       CORE::warn($x->desc . ': ' . join('', @_));
-     } => 1;
+     } => UP;
 
-     localize_delete '@ARGV', $#ARGV => 1; # delete last @ARGV element
+     localize_delete '@ARGV', $#ARGV => UP; # delete last @ARGV element
     }
 
     package Y;
@@ -82,6 +82,41 @@ This module lets you defer actions that will take place when the control flow re
 Currently, you can hook an upper scope end, or localize variables, array/hash values or deletions of elements in higher contexts.
 You can also return to an upper level and know which context was in use then.
 
+=head1 WORDS
+
+These control words are to be used to indicate the target scope.
+
+=head2 C<TOP>
+
+Returns the level that currently represents the highest scope.
+
+=head2 C<HERE>
+
+The current level.
+
+=head2 C<UP $from>
+
+The level of the scope just above C<$from>.
+
+=head2 C<DOWN $from>
+
+The level of the scope just below C<$from>.
+
+=head2 C<SUB $from>
+
+The level of the closest subroutine context above C<$from>.
+
+=head2 C<EVAL $from>
+
+The level of the closest eval context above C<$from>.
+
+If C<$from> is omitted in any of those functions, the current level is used as the reference level.
+
+=head2 C<CALLER $stack>
+
+The level of the C<$stack>-th upper subroutine/eval/format context.
+It kind of corresponds to the context represented by C<caller $stack>, but while e.g. C<caller 0> refers to the caller context, C<CALLER 0> will refer to the top scope in the current context.
+
 =head1 FUNCTIONS
 
 =cut
@@ -114,7 +149,7 @@ A string beginning with a sigil, representing the symbol to localize and to assi
 If the sigil is C<'$'>, L</localize> follows the same syntax as C<local $x = $value>, i.e. C<$value> isn't dereferenced.
 For example,
 
-    localize '$x', \'foo' => 0;
+    localize '$x', \'foo' => HERE;
 
 will set C<$x> to a reference to the string C<'foo'>.
 Other sigils (C<'@'>, C<'%'>, C<'&'> and C<'*'>) require C<$value> to be a reference of the corresponding type.
@@ -122,7 +157,7 @@ Other sigils (C<'@'>, C<'%'>, C<'&'> and C<'*'>) require C<$value> to be a refer
 When the symbol is given by a string, it is resolved when the actual localization takes place and not when C<localize> is called.
 This means that
 
-    sub tag { localize '$x', $_[0] => 1; }
+    sub tag { localize '$x', $_[0] => UP }
 
 will localize in the caller's namespace.
 
@@ -166,7 +201,7 @@ This means that
 
     my $num = sub {
      my @a = ('a' .. 'z');
-     unwind @a => 0;
+     unwind @a => HERE;
     }->();
 
 will set C<$num> to C<'z'>.
@@ -180,48 +215,10 @@ The previous example can then be "corrected" :
 
     my $num = sub {
      my @a = ('a' .. 'z');
-     unwind +(want_at(0) ? @a : scalar @a) => 0;
+     unwind +(want_at(HERE) ? @a : scalar @a) => HERE;
     }->();
 
 will righteously set C<$num> to C<26>.
-
-=head1 WORDS
-
-=head2 C<TOP>
-
-Returns the level that currently represents the highest scope.
-
-=head2 C<HERE>
-
-The current level - i.e. C<0>.
-
-=head2 C<UP $from>
-
-The level of the scope just above C<$from>.
-
-=head2 C<DOWN $from>
-
-The level of the scope just below C<$from>.
-
-=head2 C<SUB $from>
-
-The level of the closest subroutine context above C<$from>.
-
-=head2 C<EVAL $from>
-
-The level of the closest eval context above C<$from>.
-
-If C<$from> is omitted in any of those functions, the current level is used as the reference level.
-
-=head2 C<CALLER $stack>
-
-The level of the C<$stack>-th upper subroutine/eval/format context.
-It kind of corresponds to the context represented by C<caller $stack>, but while e.g. C<caller 0> refers to the caller context, C<CALLER 0> will refer to the top scope in the current context.
-For example,
-
-    reap ... => CALLER(0)
-
-will fire the destructor when the current subroutine/eval/format ends.
 
 =head1 EXPORT
 
@@ -248,7 +245,7 @@ Consider those examples:
 
     local $x = 0;
     {
-     reap sub { print $x } => 0;
+     reap sub { print $x } => HERE;
      local $x = 1;
      ...
     }
@@ -256,7 +253,7 @@ Consider those examples:
     ...
     {
      local $x = 1;
-     reap sub { $x = 2 } => 0;
+     reap sub { $x = 2 } => HERE;
      ...
     }
     # $x is 0

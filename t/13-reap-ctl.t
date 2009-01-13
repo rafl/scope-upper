@@ -5,7 +5,7 @@ use warnings;
 
 use Test::More tests => 38;
 
-use Scope::Upper qw/reap/;
+use Scope::Upper qw/reap UP HERE/;
 
 our ($x, $y);
 
@@ -16,7 +16,7 @@ sub check { ++$y }
  {
   local $x = 2;
   {
-   reap \&check => 1;
+   reap \&check => UP;
   }
   is $x, 2,     'goto 1 [not yet - x]';
   is $y, undef, 'goto 1 [not yet - y]';
@@ -39,7 +39,7 @@ $y = undef;
   {
    local $x = 3;
    {
-    reap \&check => 2;
+    reap \&check => UP UP;
    }
    is $x, 3,     'goto 2 [not yet - x]';
    is $y, undef, 'goto 2 [not yet - y]';
@@ -64,7 +64,7 @@ $y = undef;
    {
     {
      local $x = 3;
-     reap \&check => 3;
+     reap \&check => UP UP UP;
      is $x, 3,     'die - reap outside eval [not yet 1 - x]';
      is $y, undef, 'die - reap outside eval [not yet 1 - y]';
     }
@@ -88,7 +88,7 @@ $y = undef;
   {
    {
     local $x = 3;
-    reap \&check => 2;
+    reap \&check => UP UP;
     is $x, 3,     'die - reap at eval [not yet 1 - x]';
     is $y, undef, 'die - reap at eval [not yet 1 - y]';
    }
@@ -109,7 +109,7 @@ $y = undef;
   {
    {
     local $x = 3;
-    reap \&check => 1;
+    reap \&check => UP;
     is $x, 3,     'die - reap inside eval [not yet 1 - x]';
     is $y, undef, 'die - reap inside eval [not yet 1 - y]';
    }
@@ -129,7 +129,7 @@ $y = undef;
   local $x = 2;
   eval {
    local $x = 3;
-   reap { ++$y; die "reaped\n" } => 0;
+   reap { ++$y; die "reaped\n" } => HERE;
    is $x, 3,     'die in reap at eval [not yet - x]';
    is $y, undef, 'die in reap at eval [not yet - y]';
   }; # should trigger here, but the die isn't catched by this eval
@@ -147,7 +147,7 @@ $y = undef;
   local $x = 2;
   {
    local $x = 3;
-   reap { ++$y; die "reaped\n" } => 0;
+   reap { ++$y; die "reaped\n" } => HERE;
    is $x, 3,     'die in reap inside eval [not yet - x]';
    is $y, undef, 'die in reap inside eval [not yet - y]';
   } # should trigger here
