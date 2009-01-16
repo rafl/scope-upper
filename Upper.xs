@@ -612,6 +612,31 @@ STATIC void su_unwind(pTHX_ void *ud_) {
 
 /* --- XS ------------------------------------------------------------------ */
 
+#if SU_HAS_PERL(5, 8, 9)
+# define SU_SKIP_DB_MAX 2
+#else
+# define SU_SKIP_DB_MAX 3
+#endif
+
+/* Skip context sequences of 1 to SU_SKIP_DB_MAX (included) block contexts
+ * followed by a DB sub */
+
+#define SU_SKIP_DB(C) \
+ STMT_START {         \
+  I32 i = 1;          \
+  PERL_CONTEXT *cx = cxstack + (C); \
+  do {                              \
+   if (CxTYPE(cx) == CXt_BLOCK && (C) >= i) { \
+    --cx;                                     \
+    if (CxTYPE(cx) == CXt_SUB && cx->blk_sub.cv == GvCV(PL_DBsub)) { \
+     (C) -= i + 1;                \
+     break;                       \
+    }                             \
+   } else                         \
+    break;                        \
+  } while (++i <= SU_SKIP_DB_MAX); \
+ } STMT_END
+
 #define SU_GET_CONTEXT(A, B)   \
  STMT_START {                  \
   if (items > A) {             \
@@ -624,19 +649,8 @@ STATIC void su_unwind(pTHX_ void *ud_) {
     cxix = cxstack_ix;         \
   } else                       \
    cxix = cxstack_ix;          \
- } STMT_END
-
-#define SU_DOPOPTOCX(t)                \
- STMT_START {                          \
-  I32 cxix;                            \
-  SU_GET_CONTEXT(0, 0);                \
-  for (; cxix >= 0; --cxix) {          \
-   if (CxTYPE(cxstack + cxix) == t) {  \
-    ST(0) = sv_2mortal(newSViv(cxix)); \
-    XSRETURN(1);                       \
-   }                                   \
-  }                                    \
-  XSRETURN_UNDEF;                      \
+  if (PL_DBsub)                \
+   SU_SKIP_DB(cxix);           \
  } STMT_END
 
 XS(XS_Scope__Upper_unwind); /* prototype to pass -Wmissing-prototypes */
@@ -658,6 +672,8 @@ XS(XS_Scope__Upper_unwind) {
   PERL_CONTEXT *cx = cxstack + cxix;
   switch (CxTYPE(cx)) {
    case CXt_SUB:
+    if (PL_DBsub && cx->blk_sub.cv == GvCV(PL_DBsub))
+     continue;
    case CXt_EVAL:
    case CXt_FORMAT:
     MY_CXT.cxix  = cxix;
@@ -704,8 +720,12 @@ CODE:
 SV *
 HERE()
 PROTOTYPE:
+PREINIT:
+ I32 cxix = cxstack_ix;
 CODE:
- RETVAL = newSViv(cxstack_ix);
+ if (PL_DBsub)
+  SU_SKIP_DB(cxix);
+ RETVAL = newSViv(cxix);
 OUTPUT:
  RETVAL
 
@@ -718,6 +738,8 @@ CODE:
  SU_GET_CONTEXT(0, 0);
  if (--cxix < 0)
   cxix = 0;
+ if (PL_DBsub)
+  SU_SKIP_DB(cxix);
  RETVAL = newSViv(cxix);
 OUTPUT:
  RETVAL
@@ -738,14 +760,42 @@ OUTPUT:
 void
 SUB(...)
 PROTOTYPE: ;$
+PREINIT:
+ I32 cxix;
 PPCODE:
- SU_DOPOPTOCX(CXt_SUB);
+ SU_GET_CONTEXT(0, 0);
+ for (; cxix >= 0; --cxix) {
+  PERL_CONTEXT *cx = cxstack + cxix;
+  switch (CxTYPE(cx)) {
+   default:
+    continue;
+   case CXt_SUB:
+    if (PL_DBsub && cx->blk_sub.cv == GvCV(PL_DBsub))
+     continue;
+    ST(0) = sv_2mortal(newSViv(cxix));
+    XSRETURN(1);
+  }
+ }
+ XSRETURN_UNDEF;
 
 void
 EVAL(...)
 PROTOTYPE: ;$
+PREINIT:
+ I32 cxix;
 PPCODE:
- SU_DOPOPTOCX(CXt_EVAL);
+ SU_GET_CONTEXT(0, 0);
+ for (; cxix >= 0; --cxix) {
+  PERL_CONTEXT *cx = cxstack + cxix;
+  switch (CxTYPE(cx)) {
+   default:
+    continue;
+   case CXt_EVAL:
+    ST(0) = sv_2mortal(newSViv(cxix));
+    XSRETURN(1);
+  }
+ }
+ XSRETURN_UNDEF;
 
 void
 CALLER(...)
@@ -760,11 +810,12 @@ PPCODE:
   if (caller < 0)
    caller = 0;
  }
- cxix = cxstack_ix;
- while (cxix > 0) {
+ for (cxix = cxstack_ix; cxix > 0; --cxix) {
   PERL_CONTEXT *cx = cxstack + cxix;
   switch (CxTYPE(cx)) {
    case CXt_SUB:
+    if (PL_DBsub && cx->blk_sub.cv == GvCV(PL_DBsub))
+     continue;
    case CXt_EVAL:
    case CXt_FORMAT:
     --caller;
@@ -772,7 +823,6 @@ PPCODE:
      goto done;
     break;
   }
-  --cxix;
  }
 done:
  ST(0) = sv_2mortal(newSViv(cxix));
