@@ -3,14 +3,13 @@
 use strict;
 use warnings;
 
-use Test::More tests => 46;
+use Test::More tests => 42;
 
 use Scope::Upper qw/:words/;
 
 is HERE, 0, 'main : here';
 is TOP,  0, 'main : top';
 is UP,   0, 'main : up';
-is DOWN, 0, 'main : down';
 is SUB,  undef, 'main : sub';
 is EVAL, undef, 'main : eval';
 
@@ -18,9 +17,6 @@ is EVAL, undef, 'main : eval';
  is HERE, 1, '{ 1 } : here';
  is TOP,  0, '{ 1 } : top';
  is UP,   0, '{ 1 } : up';
- is DOWN, 1, '{ 1 } : down';
- is DOWN(UP), 1, '{ 1 } : up then down';
- is UP(DOWN), 0, '{ 1 } : down then up';
 }
 
 do {

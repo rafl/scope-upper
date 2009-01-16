@@ -744,19 +744,6 @@ CODE:
 OUTPUT:
  RETVAL
 
-SV *
-DOWN(...)
-PROTOTYPE: ;$
-PREINIT:
- I32 cxix;
-CODE:
- SU_GET_CONTEXT(0, 0);
- if (++cxix > cxstack_ix)
-  cxix = cxstack_ix;
- RETVAL = newSViv(cxix);
-OUTPUT:
- RETVAL
-
 void
 SUB(...)
 PROTOTYPE: ;$
