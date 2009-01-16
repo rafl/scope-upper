@@ -35,3 +35,12 @@ WriteMakefile(
     },
     clean         => { FILES => 'Scope-Upper-* *.gcov *.gcda *.gcno cover_db Debian_CPANTS.txt' },
 );
+
+package MY;
+
+sub postamble {
+ return <<'POSTAMBLE';
+testdeb:
+	PERL_DL_NONLAZY=1 PERLDB_OPTS="NonStop=1" prove --exec='$(PERL) -d -T -I$(INST_LIB) -I$(INST_ARCHLIB)' $(TEST_FILES)
+POSTAMBLE
+}
