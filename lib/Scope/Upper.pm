@@ -22,7 +22,7 @@ BEGIN {
 
     package X;
 
-    use Scope::Upper qw/reap localize localize_elem localize_delete UP/;
+    use Scope::Upper qw/reap localize localize_elem localize_delete :words/;
 
     sub desc { shift->{desc} }
 
@@ -30,21 +30,22 @@ BEGIN {
      my ($desc) = @_;
 
      # First localize $x so that it gets destroyed last
-     localize '$x' => bless({ desc => $desc }, __PACKAGE__) => UP;
+     localize '$x' => bless({ desc => $desc }, __PACKAGE__) => UP; # one scope up
 
      reap sub {
       my $pkg = caller;
       my $x = do { no strict 'refs'; ${$pkg.'::x'} }; # Get the $x in the scope
       print $x->desc . ": done\n";
-     } => UP;
+     } => SCOPE 1; # same as UP here
 
      localize_elem '%SIG', '__WARN__' => sub {
       my $pkg = caller;
       my $x = do { no strict 'refs'; ${$pkg.'::x'} }; # Get the $x in the scope
       CORE::warn($x->desc . ': ' . join('', @_));
-     } => UP;
+     } => UP CALLER 0; # same as UP here
 
-     localize_delete '@ARGV', $#ARGV => UP; # delete last @ARGV element
+     # delete last @ARGV element
+     localize_delete '@ARGV', -1 => UP SUB HERE; # same as UP here
     }
 
     package Y;
@@ -82,42 +83,16 @@ This module lets you defer actions that will take place when the control flow re
 Currently, you can hook an upper scope end, or localize variables, array/hash values or deletions of elements in higher contexts.
 You can also return to an upper level and know which context was in use then.
 
-=head1 WORDS
-
-These control words are to be used to indicate the target scope.
-
-=head2 C<TOP>
-
-Returns the level that currently represents the highest scope.
-
-=head2 C<HERE>
-
-The current level.
-
-=head2 C<UP $from>
-
-The level of the scope just above C<$from>.
-
-=head2 C<SUB $from>
-
-The level of the closest subroutine context above C<$from>.
-
-=head2 C<EVAL $from>
-
-The level of the closest eval context above C<$from>.
-
-If C<$from> is omitted in any of those functions, the current level is used as the reference level.
-
-=head2 C<SCOPE $stack>
-
-The C<$stack>-th upper frame.
-
-=head2 C<CALLER $stack>
-
-The level of the C<$stack>-th upper subroutine/eval/format context.
-It kind of corresponds to the context represented by C<caller $stack>, but while e.g. C<caller 0> refers to the caller context, C<CALLER 0> will refer to the top scope in the current context.
-
 =head1 FUNCTIONS
+
+In all those functions, C<$context> refers to the target scope.
+
+You have to use one or a combination of L</WORDS> to build the C<$context> to pass to these functions.
+This is needed in order to ensure that the module still works when your program is ran in the debugger.
+Don't try to use a raw value or things will get messy.
+
+The only thing you can assume is that it is an I<absolute> indicator of the frame.
+This means that you can safely store it at some point and use it when needed, and it will still denote the original scope.
 
 =cut
 
@@ -126,13 +101,13 @@ BEGIN {
  XSLoader::load(__PACKAGE__, $VERSION);
 }
 
-=head2 C<reap $callback, $level>
+=head2 C<reap $callback, $context>
 
-Add a destructor that calls C<$callback> when the C<$level>-th upper scope ends, where C<0> corresponds to the current scope.
+Add a destructor that calls C<$callback> when the upper scope represented by C<$context> ends.
 
-=head2 C<localize $what, $value, $level>
+=head2 C<localize $what, $value, $context>
 
-A C<local> delayed to the time of first return into the C<$level>-th upper scope.
+A C<local> delayed to the time of first return into the upper scope denoted by C<$context>.
 C<$what> can be :
 
 =over 4
@@ -163,13 +138,13 @@ will localize in the caller's namespace.
 
 =back
 
-=head2 C<localize_elem $what, $key, $value, $level>
+=head2 C<localize_elem $what, $key, $value, $context>
 
 Similar to L</localize> but for array and hash elements.
 If C<$what> is a glob, the slot to fill is determined from which type of reference C<$value> is ; otherwise it's inferred from the sigil.
 C<$key> is either an array index or a hash key, depending of which kind of variable you localize.
 
-=head2 C<localize_delete $what, $key, $level>
+=head2 C<localize_delete $what, $key, $context>
 
 Similiar to L</localize>, but for deleting variables or array/hash elements.
 C<$what> can be:
@@ -192,11 +167,11 @@ C<$key> is ignored.
 
 =back
 
-=head2 C<unwind @values, $level>
+=head2 C<unwind @values, $context>
 
-Returns C<@values> I<from> the context indicated by C<$level>, i.e. from the subroutine, eval or format just above C<$level>.
+Returns C<@values> I<from> the context pointed by C<$context>, i.e. from the subroutine, eval or format just above C<$context>.
 
-The upper level isn't coerced onto C<@values>, which is hence always evaluated in list context.
+The upper context isn't coerced onto C<@values>, which is hence always evaluated in list context.
 This means that
 
     my $num = sub {
@@ -207,9 +182,9 @@ This means that
 will set C<$num> to C<'z'>.
 You can use L</want_at> to handle these cases.
 
-=head2 C<want_at $level>
+=head2 C<want_at $context>
 
-Like C<wantarray>, but for the subroutine/eval/format context just above C<$level>.
+Like C<wantarray>, but for the subroutine/eval/format just above C<$context>.
 
 The previous example can then be "corrected" :
 
@@ -219,6 +194,49 @@ The previous example can then be "corrected" :
     }->();
 
 will righteously set C<$num> to C<26>.
+
+=head1 WORDS
+
+=head2 Constants
+
+=head3 C<TOP>
+
+Returns the context that currently represents the highest scope.
+
+=head3 C<HERE>
+
+The context of the current scope.
+
+=head2 Getting a context from a context
+
+For any of those functions, C<$from> is expected to be a context.
+When omitted, it defaults to the the current context.
+
+=head3 C<UP $from>
+
+The context of the scope just above C<$from>.
+
+=head3 C<SUB $from>
+
+The context of the closest subroutine above C<$from>.
+
+=head3 C<EVAL $from>
+
+The context of the closest eval above C<$from>.
+
+=head2 Getting a context from a level
+
+Here, C<$level> should denote a number of scopes above the current one.
+When omitted, it defaults to C<0> and those functions return the same context as L</HERE>.
+
+=head3 C<SCOPE $level>
+
+The C<$level>-th upper context, regardless of its type.
+
+=head3 C<CALLER $level>
+
+The context of the C<$level>-th upper subroutine/eval/format.
+It kind of corresponds to the context represented by C<caller $level>, but while e.g. C<caller 0> refers to the caller context, C<CALLER 0> will refer to the top scope in the current context.
 
 =head1 EXPORT
 
@@ -263,6 +281,9 @@ The first case is "solved" by moving the C<local> before the C<reap>, and the se
 L</reap>, L</localize> and L</localize_elem> effects can't cross C<BEGIN> blocks, hence calling those functions in C<import> is deemed to be useless.
 This is an hopeless case because C<BEGIN> blocks are executed once while localizing constructs should do their job at each run.
 
+Some rare oddities may still happen when running inside the debugger.
+It may help to use a perl higher than 5.8.9 or 5.10.0, as they contain some context fixes.
+
 =head1 DEPENDENCIES
 
 L<XSLoader> (standard since perl 5.006).
@@ -292,6 +313,8 @@ Tests code coverage report is available at L<http://www.profvince.com/perl/cover
 =head1 ACKNOWLEDGEMENTS
 
 Inspired by Ricardo Signes.
+
+Thanks to Shawn M. Moore for motivation.
 
 =head1 COPYRIGHT & LICENSE
 
