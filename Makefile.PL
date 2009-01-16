@@ -40,7 +40,7 @@ package MY;
 
 sub postamble {
  return <<'POSTAMBLE';
-testdeb:
+testdeb: all
 	PERL_DL_NONLAZY=1 PERLDB_OPTS="NonStop=1" prove --exec='$(PERL) -d -T -I$(INST_LIB) -I$(INST_ARCHLIB)' $(TEST_FILES)
 POSTAMBLE
 }
