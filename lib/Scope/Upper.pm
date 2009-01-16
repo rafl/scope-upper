@@ -108,6 +108,10 @@ The level of the closest eval context above C<$from>.
 
 If C<$from> is omitted in any of those functions, the current level is used as the reference level.
 
+=head2 C<SCOPE $stack>
+
+The C<$stack>-th upper frame.
+
 =head2 C<CALLER $stack>
 
 The level of the C<$stack>-th upper subroutine/eval/format context.
@@ -220,7 +224,7 @@ will righteously set C<$num> to C<26>.
 
 The functions L</reap>, L</localize>, L</localize_elem>, L</localize_delete>,  L</unwind> and L</want_at> are only exported on request, either individually or by the tags C<':funcs'> and C<':all'>.
 
-Same goes for the words L</TOP>, L</HERE>, L</UP>, L</SUB>, L</EVAL> and L</CALLER> that are only exported on request, individually or by the tags C<':words'> and C<':all'>.
+Same goes for the words L</TOP>, L</HERE>, L</UP>, L</SUB>, L</EVAL>, L</SCOPE> and L</CALLER> that are only exported on request, individually or by the tags C<':words'> and C<':all'>.
 
 =cut
 
@@ -229,7 +233,7 @@ use base qw/Exporter/;
 our @EXPORT      = ();
 our %EXPORT_TAGS = (
  funcs => [ qw/reap localize localize_elem localize_delete unwind want_at/ ],
- words => [ qw/TOP HERE UP SUB EVAL CALLER/ ],
+ words => [ qw/TOP HERE UP SUB EVAL SCOPE CALLER/ ],
 );
 our @EXPORT_OK   = map { @$_ } values %EXPORT_TAGS;
 $EXPORT_TAGS{'all'} = [ @EXPORT_OK ];

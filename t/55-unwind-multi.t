@@ -5,7 +5,7 @@ use warnings;
 
 use Test::More tests => 13;
 
-use Scope::Upper qw/unwind/;
+use Scope::Upper qw/unwind SCOPE/;
 
 my ($l1, $l2);
 
@@ -17,10 +17,10 @@ sub c {
   unwind("eval", eval {
    do {
     for (3, 4, 5) {
-     1, unwind('from', 'the', 'sub', 'c' => $l1);
+     1, unwind('from', 'the', 'sub', 'c' => SCOPE $l1);
     }
    }
-  } => $l2);
+  } => SCOPE $l2);
  }->(2, 3, 4);
  return 'in c'
 }

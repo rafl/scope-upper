@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 42;
+use Test::More tests => 29 + 13 * 2;
 
 use Scope::Upper qw/:words/;
 
@@ -72,22 +72,35 @@ do {
 } while (0);
 
 {
- is CALLER,    0, '{ } : caller';
- is CALLER(0), 0, '{ } : caller 0';
- is CALLER(1), 0, '{ } : caller 1';
+ is SCOPE,    1, 'block : scope';
+ is SCOPE(0), 1, 'block : scope 0';
+ is SCOPE(1), 0, 'block : scope 1';
+ is CALLER,    0, 'block: caller';
+ is CALLER(0), 0, 'block : caller 0';
+ is CALLER(1), 0, 'block : caller 1';
  sub {
-  is CALLER,    2, '{ sub { } } : caller';
-  is CALLER(0), 2, '{ sub { } } : caller 0';
-  is CALLER(1), 0, '{ sub { } } : caller 1';
+  is SCOPE,    2, 'block sub : scope';
+  is SCOPE(0), 2, 'block sub : scope 0';
+  is SCOPE(1), 1, 'block sub : scope 1';
+  is CALLER,    2, 'block sub : caller';
+  is CALLER(0), 2, 'block sub : caller 0';
+  is CALLER(1), 0, 'block sub : caller 1';
   for (1) {
-   is CALLER,    2, '{ sub { for { } } } : caller';
-   is CALLER(0), 2, '{ sub { for { } } } : caller 0';
-   is CALLER(1), 0, '{ sub { for { } } } : caller 1';
+   is SCOPE,    3, 'block sub for : scope';
+   is SCOPE(0), 3, 'block sub for : scope 0';
+   is SCOPE(1), 2, 'block sub for : scope 1';
+   is CALLER,    2, 'block sub for : caller';
+   is CALLER(0), 2, 'block sub for : caller 0';
+   is CALLER(1), 0, 'block sub for : caller 1';
    eval {
-    is CALLER,    4, '{ sub { for { eval { } } } } : caller';
-    is CALLER(0), 4, '{ sub { for { eval { } } } } : caller 0';
-    is CALLER(1), 2, '{ sub { for { eval { } } } } : caller 1';
-    is CALLER(2), 0, '{ sub { for { eval { } } } } : caller 2';
+    is SCOPE,    4, 'block sub for eval : scope';
+    is SCOPE(0), 4, 'block sub for eval : scope 0';
+    is SCOPE(1), 3, 'block sub for eval : scope 1';
+    is SCOPE(2), 2, 'block sub for eval : scope 2';
+    is CALLER,    4, 'block sub for eval : caller';
+    is CALLER(0), 4, 'block sub for eval : caller 0';
+    is CALLER(1), 2, 'block sub for eval : caller 1';
+    is CALLER(2), 0, 'block sub for eval : caller 2';
    }
   }
  }->();

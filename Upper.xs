@@ -654,6 +654,18 @@ STATIC void su_unwind(pTHX_ void *ud_) {
   }                            \
  } STMT_END
 
+#define SU_GET_LEVEL(A, B) \
+ STMT_START {              \
+  if (items > 0) {         \
+   SV *lsv = ST(B);        \
+   if (SvOK(lsv))          \
+    level = SvIV(lsv);     \
+   if (level < 0)          \
+    level = 0;             \
+  } else                   \
+   level = 0;              \
+ } STMT_END
+
 XS(XS_Scope__Upper_unwind); /* prototype to pass -Wmissing-prototypes */
 
 XS(XS_Scope__Upper_unwind) {
@@ -786,18 +798,36 @@ PPCODE:
  XSRETURN_UNDEF;
 
 void
+SCOPE(...)
+PROTOTYPE: ;$
+PREINIT:
+ I32 cxix, level;
+PPCODE:
+ SU_GET_LEVEL(0, 0);
+ cxix = cxstack_ix;
+ if (PL_DBsub) {
+  SU_SKIP_DB(cxix);
+  while (cxix > 0) {
+   if (--level < 0)
+    break;
+   --cxix;
+   SU_SKIP_DB(cxix);
+  }
+ } else {
+  cxix -= level;
+  if (cxix < 0)
+   cxix = 0;
+ }
+ ST(0) = sv_2mortal(newSViv(cxix));
+ XSRETURN(1);
+
+void
 CALLER(...)
 PROTOTYPE: ;$
 PREINIT:
- I32 cxix, caller = 0;
+ I32 cxix, level;
 PPCODE:
- if (items) {
-  SV *csv = ST(0);
-  if (SvOK(csv))
-   caller = SvIV(csv);
-  if (caller < 0)
-   caller = 0;
- }
+ SU_GET_LEVEL(0, 0);
  for (cxix = cxstack_ix; cxix > 0; --cxix) {
   PERL_CONTEXT *cx = cxstack + cxix;
   switch (CxTYPE(cx)) {
@@ -806,8 +836,7 @@ PPCODE:
      continue;
    case CXt_EVAL:
    case CXt_FORMAT:
-    --caller;
-    if (caller < 0)
+    if (--level < 0)
      goto done;
     break;
   }
