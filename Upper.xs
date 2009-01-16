@@ -647,10 +647,11 @@ STATIC void su_unwind(pTHX_ void *ud_) {
     cxix = 0;                  \
    else if (cxix > cxstack_ix) \
     cxix = cxstack_ix;         \
-  } else                       \
+  } else {                     \
    cxix = cxstack_ix;          \
-  if (PL_DBsub)                \
-   SU_SKIP_DB(cxix);           \
+   if (PL_DBsub)               \
+    SU_SKIP_DB(cxix);          \
+  }                            \
  } STMT_END
 
 XS(XS_Scope__Upper_unwind); /* prototype to pass -Wmissing-prototypes */
