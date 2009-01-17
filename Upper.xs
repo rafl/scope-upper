@@ -629,11 +629,11 @@ STATIC void su_unwind(pTHX_ void *ud_) {
    if (CxTYPE(cx) == CXt_BLOCK && (C) >= i) { \
     --cx;                                     \
     if (CxTYPE(cx) == CXt_SUB && cx->blk_sub.cv == GvCV(PL_DBsub)) { \
-     (C) -= i + 1;                \
-     break;                       \
-    }                             \
-   } else                         \
-    break;                        \
+     (C) -= i + 1;                 \
+     break;                        \
+    }                              \
+   } else                          \
+    break;                         \
   } while (++i <= SU_SKIP_DB_MAX); \
  } STMT_END
 
