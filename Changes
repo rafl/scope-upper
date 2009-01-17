@@ -1,5 +1,15 @@
 Revision history for Scope-Upper
 
+0.06    2009-01-17 00:05 UTC
+        + Chg : INCOMPATIBLE CHANGE: The level is now absolute and no longer
+                relative to the current frame - we'll call it "context" from now
+                on. You should replace all your raw levels by combinations of
+                words.
+                The old behaviour of "=> $n" can be easily reobtained by using
+                "=> SCOPE($n)".
+        + Fix : As a result of this change, the module now plays nicely with
+                the debugger.
+
 0.05    2009-01-12 18:15 UTC
         + Fix : Stack mess when using unwind() in scalar context.
         + Fix : Returning an automatic variable isn't wise, so let's use a

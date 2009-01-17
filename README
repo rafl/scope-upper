@@ -2,12 +2,12 @@ NAME
     Scope::Upper - Act on upper scopes.
 
 VERSION
-    Version 0.05
+    Version 0.06
 
 SYNOPSIS
         package X;
 
-        use Scope::Upper qw/reap localize localize_elem localize_delete/;
+        use Scope::Upper qw/reap localize localize_elem localize_delete :words/;
 
         sub desc { shift->{desc} }
 
@@ -15,21 +15,22 @@ SYNOPSIS
          my ($desc) = @_;
 
          # First localize $x so that it gets destroyed last
-         localize '$x' => bless({ desc => $desc }, __PACKAGE__) => 1;
+         localize '$x' => bless({ desc => $desc }, __PACKAGE__) => UP; # one scope up
 
          reap sub {
           my $pkg = caller;
           my $x = do { no strict 'refs'; ${$pkg.'::x'} }; # Get the $x in the scope
           print $x->desc . ": done\n";
-         } => 1;
+         } => SCOPE 1; # same as UP here
 
          localize_elem '%SIG', '__WARN__' => sub {
           my $pkg = caller;
           my $x = do { no strict 'refs'; ${$pkg.'::x'} }; # Get the $x in the scope
           CORE::warn($x->desc . ': ' . join('', @_));
-         } => 1;
+         } => UP CALLER 0; # same as UP here
 
-         localize_delete '@ARGV', $#ARGV => 1; # delete last @ARGV element
+         # delete last @ARGV element
+         localize_delete '@ARGV', -1 => UP SUB HERE; # same as UP here
         }
 
         package Y;
@@ -69,13 +70,24 @@ DESCRIPTION
     context was in use then.
 
 FUNCTIONS
-  "reap $callback, $level"
-    Add a destructor that calls $callback when the $level-th upper scope
-    ends, where 0 corresponds to the current scope.
+    In all those functions, $context refers to the target scope.
 
-  "localize $what, $value, $level"
-    A "local" delayed to the time of first return into the $level-th upper
-    scope. $what can be :
+    You have to use one or a combination of "WORDS" to build the $context to
+    pass to these functions. This is needed in order to ensure that the
+    module still works when your program is ran in the debugger. Don't try
+    to use a raw value or things will get messy.
+
+    The only thing you can assume is that it is an *absolute* indicator of
+    the frame. This means that you can safely store it at some point and use
+    it when needed, and it will still denote the original scope.
+
+  "reap $callback, $context"
+    Add a destructor that calls $callback when the upper scope represented
+    by $context ends.
+
+  "localize $what, $value, $context"
+    A "local" delayed to the time of first return into the upper scope
+    denoted by $context. $what can be :
 
     *   A glob, in which case $value can either be a glob or a reference.
         "localize" follows then the same syntax as "local *x = $value". For
@@ -88,7 +100,7 @@ FUNCTIONS
         syntax as "local $x = $value", i.e. $value isn't dereferenced. For
         example,
 
-            localize '$x', \'foo' => 0;
+            localize '$x', \'foo' => HERE;
 
         will set $x to a reference to the string 'foo'. Other sigils ('@',
         '%', '&' and '*') require $value to be a reference of the
@@ -98,17 +110,17 @@ FUNCTIONS
         localization takes place and not when "localize" is called. This
         means that
 
-            sub tag { localize '$x', $_[0] => 1; }
+            sub tag { localize '$x', $_[0] => UP }
 
         will localize in the caller's namespace.
 
-  "localize_elem $what, $key, $value, $level"
+  "localize_elem $what, $key, $value, $context"
     Similar to "localize" but for array and hash elements. If $what is a
     glob, the slot to fill is determined from which type of reference $value
     is ; otherwise it's inferred from the sigil. $key is either an array
     index or a hash key, depending of which kind of variable you localize.
 
-  "localize_delete $what, $key, $level"
+  "localize_delete $what, $key, $context"
     Similiar to "localize", but for deleting variables or array/hash
     elements. $what can be:
 
@@ -123,71 +135,74 @@ FUNCTIONS
         in the upper scope. It's actually more powerful, as &func won't even
         "exists" anymore. $key is ignored.
 
-  "unwind @values, $level"
-    Returns @values *from* the context indicated by $level, i.e. from the
-    subroutine, eval or format just above $level.
+  "unwind @values, $context"
+    Returns @values *from* the context pointed by $context, i.e. from the
+    subroutine, eval or format just above $context.
 
-    The upper level isn't coerced onto @values, which is hence always
+    The upper context isn't coerced onto @values, which is hence always
     evaluated in list context. This means that
 
         my $num = sub {
          my @a = ('a' .. 'z');
-         unwind @a => 0;
+         unwind @a => HERE;
         }->();
 
     will set $num to 'z'. You can use "want_at" to handle these cases.
 
-  "want_at $level"
-    Like "wantarray", but for the subroutine/eval/format context just above
-    $level.
+  "want_at $context"
+    Like "wantarray", but for the subroutine/eval/format just above
+    $context.
 
     The previous example can then be "corrected" :
 
         my $num = sub {
          my @a = ('a' .. 'z');
-         unwind +(want_at(0) ? @a : scalar @a) => 0;
+         unwind +(want_at(HERE) ? @a : scalar @a) => HERE;
         }->();
 
     will righteously set $num to 26.
 
 WORDS
-  "TOP"
-    Returns the level that currently represents the highest scope.
+  Constants
+   "TOP"
+    Returns the context that currently represents the highest scope.
 
-  "HERE"
-    The current level - i.e. 0.
+   "HERE"
+    The context of the current scope.
 
-  "UP $from"
-    The level of the scope just above $from.
+  Getting a context from a context
+    For any of those functions, $from is expected to be a context. When
+    omitted, it defaults to the the current context.
 
-  "DOWN $from"
-    The level of the scope just below $from.
+   "UP $from"
+    The context of the scope just above $from.
 
-  "SUB $from"
-    The level of the closest subroutine context above $from.
+   "SUB $from"
+    The context of the closest subroutine above $from.
 
-  "EVAL $from"
-    The level of the closest eval context above $from.
+   "EVAL $from"
+    The context of the closest eval above $from.
 
-    If $from is omitted in any of those functions, the current level is used
-    as the reference level.
+  Getting a context from a level
+    Here, $level should denote a number of scopes above the current one.
+    When omitted, it defaults to 0 and those functions return the same
+    context as "HERE".
 
-  "CALLER $stack"
-    The level of the $stack-th upper subroutine/eval/format context. It kind
-    of corresponds to the context represented by "caller $stack", but while
+   "SCOPE $level"
+    The $level-th upper context, regardless of its type.
+
+   "CALLER $level"
+    The context of the $level-th upper subroutine/eval/format. It kind of
+    corresponds to the context represented by "caller $level", but while
     e.g. "caller 0" refers to the caller context, "CALLER 0" will refer to
-    the top scope in the current context. For example,
-
-        reap ... => CALLER(0)
-
-    will fire the destructor when the current subroutine/eval/format ends.
+    the top scope in the current context.
 
 EXPORT
     The functions "reap", "localize", "localize_elem", "localize_delete",
     "unwind" and "want_at" are only exported on request, either individually
     or by the tags ':funcs' and ':all'.
 
-    Same goes for the words "TOP", "HERE", "UP", "DOWN", "SUB", "EVAL" and
+    Same goes for the words "TOP", "HERE", "UP", "SUB", "EVAL", "SCOPE" and
     "CALLER" that are only exported on request, individually or by the tags
     ':words' and ':all'.
 
@@ -197,7 +212,7 @@ CAVEATS
 
         local $x = 0;
         {
-         reap sub { print $x } => 0;
+         reap sub { print $x } => HERE;
          local $x = 1;
          ...
         }
@@ -205,7 +220,7 @@ CAVEATS
         ...
         {
          local $x = 1;
-         reap sub { $x = 2 } => 0;
+         reap sub { $x = 2 } => HERE;
          ...
         }
         # $x is 0
@@ -217,6 +232,10 @@ CAVEATS
     blocks, hence calling those functions in "import" is deemed to be
     useless. This is an hopeless case because "BEGIN" blocks are executed
     once while localizing constructs should do their job at each run.
+
+    Some rare oddities may still happen when running inside the debugger. It
+    may help to use a perl higher than 5.8.9 or 5.10.0, as they contain some
+    context fixes.
 
 DEPENDENCIES
     XSLoader (standard since perl 5.006).
@@ -246,6 +265,8 @@ SUPPORT
 
 ACKNOWLEDGEMENTS
     Inspired by Ricardo Signes.
+
+    Thanks to Shawn M. Moore for motivation.
 
 COPYRIGHT & LICENSE
     Copyright 2008-2009 Vincent Pit, all rights reserved.
