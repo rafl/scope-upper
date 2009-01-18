@@ -421,7 +421,6 @@ STATIC void su_localize(pTHX_ void *ud_) {
    break;
   default:
    gv = (GV *) save_scalar(gv);
-maybe_deref:
    if (deref) /* val != NULL */
     val = SvRV(val);
    break;
