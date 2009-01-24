@@ -169,7 +169,7 @@ C<$key> is ignored.
 
 =head2 C<unwind @values, $context>
 
-Returns C<@values> I<from> the context pointed by C<$context>, i.e. from the subroutine, eval or format just above C<$context>.
+Returns C<@values> I<from> the context pointed by C<$context>, i.e. from the subroutine, eval or format just above C<$context>, and immediately restart the program flow at this point - thus effectively returning to (or from, depending on how you see it) an upper context.
 
 The upper context isn't coerced onto C<@values>, which is hence always evaluated in list context.
 This means that
