@@ -137,7 +137,6 @@ STATIC I32 su_av_key2idx(pTHX_ AV *av, I32 key) {
  if (SvRMAGICAL(av)) {
   const MAGIC * const tied_magic = mg_find((SV *) av, PERL_MAGIC_tied);
   if (tied_magic) {
-   int adjust_index = 1;
    SV * const * const negative_indices_glob =
                     hv_fetch(SvSTASH(SvRV(SvTIED_obj((SV *) (av), tied_magic))),
                              NEGATIVE_INDICES_VAR, 16, 0);
@@ -491,7 +490,6 @@ STATIC void su_pop(pTHX_ void *ud) {
 STATIC I32 su_init(pTHX_ I32 cxix, void *ud, I32 size) {
 #define su_init(L, U, S) su_init(aTHX_ (L), (U), (S))
  I32 i, depth = 0, *origin;
- I32 cur, last, step;
 
  LEAVE;
 
