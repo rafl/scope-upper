@@ -295,11 +295,12 @@ STATIC void su_call(pTHX_ void *ud_) {
   * when the new sub scope will be created in call_sv. */
 
 #if SU_HAS_PERL(5, 10, 0)
- if (dieing)
+ if (dieing) {
   if (cxstack_ix < cxstack_max)
    ++cxstack_ix;
   else
    cxstack_ix = Perl_cxinc(aTHX);
+ }
 #endif
 
  call_sv(ud->cb, G_VOID);
