@@ -247,7 +247,7 @@ STATIC void su_save_helem(pTHX_ HV *hv, SV *keysv, SV *val) {
  if (val) { /* local $x{$keysv} = $val; */
   SvSetMagicSV(*svp, val);
  } else {   /* local $x{$keysv}; delete $x{$keysv}; */
-  hv_delete_ent(hv, keysv, G_DISCARD, HeHASH(he));
+  (void)hv_delete_ent(hv, keysv, G_DISCARD, HeHASH(he));
  }
 }
 
