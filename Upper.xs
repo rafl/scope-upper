@@ -578,6 +578,8 @@ STATIC void su_unwind(pTHX_ void *ud_) {
  SV **savesp = MY_CXT.savesp;
  I32 mark;
 
+ PERL_UNUSED_VAR(ud_);
+
  if (savesp)
   PL_stack_sp = savesp;
 
@@ -723,6 +725,7 @@ void
 CLONE(...)
 PROTOTYPE: DISABLE
 CODE:
+ PERL_UNUSED_VAR(items);
 #if SU_THREADSAFE
  MY_CXT_CLONE;
 #endif /* SU_THREADSAFE */
